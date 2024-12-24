@@ -50,9 +50,19 @@ var (
 )
 
 func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	// Only try to load .env file in development
+	if os.Getenv("ENVIRONMENT") != "production" {
+		if err := godotenv.Load(); err != nil {
+			log.Printf("Warning: No .env file not found, using environment variables")
+		}
 	}
+}
+
+func getEnvWithFallback(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func initDB() {
@@ -295,8 +305,16 @@ type User struct {
 
 func main() {
 	// Set Gin mode based on environment
-	if os.Getenv("ENVIRONMENT") == "production" {
+	if getEnvWithFallback("ENVIRONMENT", "development") == "production" {
 		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// Verify required environment variables
+	requiredEnvVars := []string{"JWT_SECRET", "ADMIN_USERNAME", "ADMIN_PASSWORD"}
+	for _, envVar := range requiredEnvVars {
+		if os.Getenv(envVar) == "" {
+			log.Fatalf("Required environment variable %s is not set", envVar)
+		}
 	}
 
 	initDB()
