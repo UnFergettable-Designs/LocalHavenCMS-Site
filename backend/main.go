@@ -59,12 +59,25 @@ func initDB() {
 	var err error
 	dbPath := os.Getenv("DATABASE_URL")
 	if dbPath == "" {
-		dbPath = "./localhavencms.db"
+		// Ensure we use the data directory
+		dbPath = "/app/data/localhavencms.db"
 	}
 
+	// Create data directory if it doesn't exist
+	dataDir := "/app/data"
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Printf("Warning: Could not create data directory: %v", err)
+	}
+
+	log.Printf("Opening database at: %s", dbPath)
 	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Test database connection
+	if err = db.Ping(); err != nil {
+		log.Fatal("Database connection failed:", err)
 	}
 
 	// Create tables

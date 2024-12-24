@@ -11,9 +11,10 @@ RUN go mod download
 COPY . .
 RUN go build -o main .
 
-# Create data directory and set permissions
-RUN mkdir -p /app/data
-RUN chown -R nobody:nobody /app/data
+# Create data directory with proper permissions
+RUN mkdir -p /app/data && \
+    chown -R nobody:nobody /app && \
+    chmod 777 /app/data
 
 USER nobody
 
