@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -69,17 +70,24 @@ func initDB() {
 	var err error
 	dbPath := os.Getenv("DATABASE_URL")
 	if dbPath == "" {
-		// Ensure we use the data directory
 		dbPath = "/app/data/localhavencms.db"
 	}
 
-	// Create data directory if it doesn't exist
-	dataDir := "/app/data"
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		log.Printf("Warning: Could not create data directory: %v", err)
+	// Create data directory with full permissions
+	dataDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dataDir, 0777); err != nil {
+		log.Printf("Error creating data directory: %v", err)
+		// Try to create in current directory as fallback
+		dbPath = "localhavencms.db"
 	}
 
 	log.Printf("Opening database at: %s", dbPath)
+
+	// Try to create an empty file first to test permissions
+	if _, err := os.OpenFile(dbPath, os.O_RDWR|os.O_CREATE, 0666); err != nil {
+		log.Fatalf("Cannot create database file: %v", err)
+	}
+
 	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
@@ -89,6 +97,8 @@ func initDB() {
 	if err = db.Ping(); err != nil {
 		log.Fatal("Database connection failed:", err)
 	}
+
+	log.Printf("Successfully connected to database at: %s", dbPath)
 
 	// Create tables
 	createTables := `
