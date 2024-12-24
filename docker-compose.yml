@@ -12,5 +12,8 @@ services:
       - ENVIRONMENT=production
       - PORT=8090
     volumes:
-      - ./data:/app/data:rw
-    user: nobody
+      - backend_data:/app/data
+    user: "1000:1000"
+
+volumes:
+  backend_data:

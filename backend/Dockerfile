@@ -13,11 +13,14 @@ RUN go build -o main .
 
 # Create data directory with proper permissions
 RUN mkdir -p /app/data && \
-    chown -R nobody:nobody /app && \
-    chmod 777 /app/data
+    adduser -D -u 1000 appuser && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app && \
+    chmod -R 777 /app/data
 
-USER nobody
+USER appuser
 
 EXPOSE 8090
 
-CMD ["./main"]
+# Use shell form to ensure directory exists and has proper permissions
+CMD sh -c "mkdir -p /app/data && chmod 777 /app/data && ./main"
