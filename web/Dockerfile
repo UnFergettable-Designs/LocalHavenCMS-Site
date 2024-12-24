@@ -16,21 +16,17 @@ RUN pnpm build
 # Production image
 FROM nginx:alpine
 
-# Create temp directories
+# Create temp directories and set permissions
 RUN mkdir -p /tmp/nginx && \
     mkdir -p /var/cache/nginx && \
     mkdir -p /var/log/nginx && \
     mkdir -p /tmp/client_temp /tmp/proxy_temp /tmp/fastcgi_temp /tmp/uwsgi_temp /tmp/scgi_temp && \
-    # Set permissions
     chmod 777 -R /tmp/nginx /var/cache/nginx /var/log/nginx /tmp && \
-    # Remove default nginx static files
     rm -rf /usr/share/nginx/html/* && \
-    # Make sure nginx can write to these directories
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 
-# Copy custom nginx config
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Only copy the single nginx config file
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
