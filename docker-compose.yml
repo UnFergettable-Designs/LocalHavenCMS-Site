@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "${PORT:-8090}:8090"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - ENVIRONMENT=production
+      - PORT=8090
+    volumes:
+      - ./data:/app/data

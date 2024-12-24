@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Clock, Users, Cloud, Code, ArrowRight, CheckCircle } from 'lucide-svelte';
   import LocalHavenLogo from '../assets/LocalHavenCMS.webp';
+  import { config } from '../config';
 
   interface FormData {
     role: string;
@@ -70,9 +71,41 @@
     workflows: 'Approval Workflows',
   };
 
-  function handleSubmit() {
-    console.log('Survey submitted:', formData);
-    currentStep = 3;
+  async function handleSubmit() {
+    try {
+      console.log('Submitting form data:', formData);
+
+      const response = await fetch(`${config.apiUrl}/survey`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          role: formData.role,
+          otherRole: formData.otherRole,
+          cmsUsage: formData.cmsUsage,
+          otherCmsUsage: formData.otherCmsUsage,
+          features: formData.features,
+          betaInterest: formData.betaInterest ?? false, // Ensure boolean
+          email: formData.email,
+        }),
+      });
+
+      console.log('Response status:', response.status);
+
+      const result = await response.json();
+      console.log('Response data:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit survey');
+      }
+
+      currentStep = 3;
+    } catch (error: any) {
+      console.error('Error submitting survey:', error);
+      alert(`Failed to submit survey: ${error.message}`);
+    }
   }
 
   function scrollToSurvey() {
