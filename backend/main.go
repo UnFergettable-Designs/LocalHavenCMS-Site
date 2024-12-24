@@ -2,68 +2,239 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"regexp"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/time/rate"
 )
+
+type SurveyResponse struct {
+	ID            int64     `json:"id"`
+	Role          string    `json:"role"`
+	OtherRole     string    `json:"otherRole"`
+	CmsUsage      string    `json:"cmsUsage"`
+	OtherCmsUsage string    `json:"otherCmsUsage"`
+	Features      Features  `json:"features"`
+	BetaInterest  bool      `json:"betaInterest"`
+	Email         string    `json:"email"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+type Features struct {
+	Offline         int `json:"offline"`
+	Collaboration   int `json:"collaboration"`
+	AssetManagement int `json:"assetManagement"`
+	PdfHandling     int `json:"pdfHandling"`
+	VersionControl  int `json:"versionControl"`
+	Workflows       int `json:"workflows"`
+}
 
 var db *sql.DB
 
-func main() {
+// Add input validation
+var (
+	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	limiter    = rate.NewLimiter(rate.Every(time.Second), 10) // 10 requests per second
+	clients    = make(map[string]*rate.Limiter)
+	mu         sync.Mutex
+)
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
+func initDB() {
 	var err error
-	db, err = sql.Open("postgres", "user=username dbname=localhavencms sslmode=disable")
+	dbPath := os.Getenv("DATABASE_URL")
+	if dbPath == "" {
+		dbPath = "./localhavencms.db"
+	}
+
+	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	router := gin.Default()
+	// Create tables
+	createTables := `
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
 
-	// Public routes
-	router.POST("/login", login)
+    CREATE TABLE IF NOT EXISTS survey_responses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT NOT NULL,
+        other_role TEXT,
+        cms_usage TEXT NOT NULL,
+        other_cms_usage TEXT,
+        offline_rating INTEGER,
+        collaboration_rating INTEGER,
+        asset_management_rating INTEGER,
+        pdf_handling_rating INTEGER,
+        version_control_rating INTEGER,
+        workflows_rating INTEGER,
+        beta_interest BOOLEAN,
+        email TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );`
 
-	// Protected routes
-	authorized := router.Group("/")
-	authorized.Use(AuthMiddleware())
-	{
-		authorized.GET("/aggregation", aggregation)
+	_, err = db.Exec(createTables)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func validateSurveyResponse(r *SurveyResponse) error {
+	if r.Role == "" {
+		return fmt.Errorf("role is required")
+	}
+	if r.CmsUsage == "" {
+		return fmt.Errorf("CMS usage is required")
+	}
+	if r.BetaInterest && (r.Email == "" || !emailRegex.MatchString(r.Email)) {
+		return fmt.Errorf("valid email is required for beta program")
+	}
+	return nil
+}
+
+func getClientLimiter(ip string) *rate.Limiter {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if limiter, exists := clients[ip]; exists {
+		return limiter
 	}
 
-	router.Run(":8080")
+	newLimiter := rate.NewLimiter(rate.Every(time.Minute), 60) // 60 requests per minute per IP
+	clients[ip] = newLimiter
+	return newLimiter
+}
+
+func rateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		limiter := getClientLimiter(ip)
+		if !limiter.Allow() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func submitSurvey(c *gin.Context) {
+	var response SurveyResponse
+	if err := c.BindJSON(&response); err != nil {
+		log.Printf("Error binding JSON: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
+		return
+	}
+
+	if err := validateSurveyResponse(&response); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Printf("Received survey response: %+v", response)
+
+	stmt, err := db.Prepare(`
+        INSERT INTO survey_responses(
+            role, other_role, cms_usage, other_cms_usage,
+            offline_rating, collaboration_rating, asset_management_rating,
+            pdf_handling_rating, version_control_rating, workflows_rating,
+            beta_interest, email
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(
+		response.Role, response.OtherRole, response.CmsUsage, response.OtherCmsUsage,
+		response.Features.Offline, response.Features.Collaboration, response.Features.AssetManagement,
+		response.Features.PdfHandling, response.Features.VersionControl, response.Features.Workflows,
+		response.BetaInterest, response.Email,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Survey response recorded"})
+}
+
+func getSurveyResults(c *gin.Context) {
+	rows, err := db.Query(`SELECT id, role, other_role, cms_usage, other_cms_usage,
+		offline_rating, collaboration_rating, asset_management_rating,
+		pdf_handling_rating, version_control_rating, workflows_rating,
+		beta_interest, email, created_at FROM survey_responses`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var responses []SurveyResponse
+	for rows.Next() {
+		var response SurveyResponse
+		err := rows.Scan(&response.ID, &response.Role, &response.OtherRole,
+			&response.CmsUsage, &response.OtherCmsUsage,
+			&response.Features.Offline, &response.Features.Collaboration,
+			&response.Features.AssetManagement, &response.Features.PdfHandling,
+			&response.Features.VersionControl, &response.Features.Workflows,
+			&response.BetaInterest, &response.Email, &response.CreatedAt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		responses = append(responses, response)
+	}
+
+	c.JSON(http.StatusOK, responses)
 }
 
 func login(c *gin.Context) {
 	var user User
 	if err := c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
-	// Verify user credentials (replace with your logic)
-	if user.Username != "admin" || user.Password != "password" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+	if user.Username != os.Getenv("ADMIN_USERNAME") || user.Password != os.Getenv("ADMIN_PASSWORD") {
+		time.Sleep(time.Second) // Prevent timing attacks
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": user.Username,
-		"exp":      time.Now().Add(time.Hour * 72).Unix(),
+		"exp":      time.Now().Add(time.Hour * 24).Unix(), // Reduced to 24 hours
 	})
 
-	tokenString, err := token.SignedString([]byte("secret"))
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
-}
-
-func aggregation(c *gin.Context) {
-	// Fetch survey results and render the aggregation page
 }
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -79,7 +250,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.NewValidationError("unexpected signing method", jwt.ValidationErrorSignatureInvalid)
 			}
-			return []byte("secret"), nil
+			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -95,4 +266,63 @@ func AuthMiddleware() gin.HandlerFunc {
 type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+func main() {
+	// Set Gin mode based on environment
+	if os.Getenv("ENVIRONMENT") == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	initDB()
+	defer db.Close()
+
+	router := gin.Default()
+
+	// Use rate limiting
+	router.Use(rateLimitMiddleware())
+
+	// Secure CORS
+	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	router.Use(func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+				break
+			}
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	// Public routes
+	router.POST("/survey", submitSurvey)
+	router.POST("/login", login)
+
+	// Add health check endpoint
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+
+	// Protected routes
+	authorized := router.Group("/")
+	authorized.Use(AuthMiddleware())
+	{
+		authorized.GET("/results", getSurveyResults)
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	router.Run(":" + port)
 }
