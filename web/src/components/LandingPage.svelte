@@ -71,18 +71,26 @@
     workflows: 'Approval Workflows',
   };
 
+  let isSubmitting = false;
+  let errorMessage = '';
+
   async function handleSubmit() {
     try {
-      console.log('API URL:', config.apiUrl);
-      console.log('Submitting form data:', formData);
+      isSubmitting = true;
+      errorMessage = '';
 
-      const response = await fetch(`${config.apiUrl}/survey`, {
+      if (!config.apiUrl) {
+        throw new Error('API URL is not configured');
+      }
+
+      const apiUrl = config.apiUrl.replace(/\/$/, ''); // Remove trailing slash if present
+      console.log('Submitting to:', `${apiUrl}/survey`);
+
+      const response = await fetch(`${apiUrl}/survey`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
-        credentials: 'include',
         mode: 'cors',
         body: JSON.stringify({
           role: formData.role,
@@ -90,25 +98,24 @@
           cmsUsage: formData.cmsUsage,
           otherCmsUsage: formData.otherCmsUsage,
           features: formData.features,
-          betaInterest: formData.betaInterest ?? false, // Ensure boolean
+          betaInterest: formData.betaInterest ?? false,
           email: formData.email,
         }),
       });
 
-      console.log('Response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(errorText || 'Failed to submit survey');
+        throw new Error(errorText || `Server responded with status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('Success response:', result);
+      console.log('Success:', result);
       currentStep = 3;
     } catch (error: any) {
-      console.error('Error details:', error);
-      alert(`Failed to submit survey: ${error.message}`);
+      console.error('Submission error:', error);
+      errorMessage = error.message || 'Failed to submit survey. Please try again.';
+    } finally {
+      isSubmitting = false;
     }
   }
 
@@ -263,7 +270,13 @@
 
             <div class="flex justify-between mt-6">
               {#if currentStep > 0}
-                <button class="button-secondary" on:click={() => currentStep--}> Back </button>
+                <button
+                  class="button-secondary"
+                  on:click={() => currentStep--}
+                  disabled={isSubmitting}
+                >
+                  Back
+                </button>
               {/if}
               <button
                 class="button-primary"
@@ -274,11 +287,22 @@
                     currentStep++;
                   }
                 }}
+                disabled={isSubmitting}
               >
-                {currentStep === 2 ? 'Submit' : 'Next'}
-                <ArrowRight size={16} class="ml-2" />
+                {#if isSubmitting}
+                  Submitting...
+                {:else}
+                  {currentStep === 2 ? 'Submit' : 'Next'}
+                  <ArrowRight size={16} class="ml-2" />
+                {/if}
               </button>
             </div>
+
+            {#if errorMessage}
+              <div class="error-message mt-4">
+                {errorMessage}
+              </div>
+            {/if}
           {:else}
             <div class="text-center section-padding">
               <CheckCircle size={64} class="success-icon" />
@@ -579,5 +603,18 @@
     position: absolute;
     width: 1px;
     white-space: nowrap;
+  }
+
+  .error-message {
+    color: #dc2626;
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #fee2e2;
+  }
+
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 </style>
