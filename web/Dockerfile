@@ -34,7 +34,8 @@ RUN chmod +x /docker-entrypoint.sh && \
 # Copy built assets and set permissions
 COPY --from=builder /app/dist /usr/share/nginx/html/
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html
+    chmod -R 755 /usr/share/nginx/html && \
+    chmod 755 /usr/share/nginx/html
 
 # Create a directory for temporary nginx config
 RUN mkdir -p /tmp/nginx-temp && \
