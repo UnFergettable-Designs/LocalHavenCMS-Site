@@ -3,15 +3,17 @@ interface Config {
 }
 
 function getApiUrl(): string {
-  if (import.meta.env.DEV) {
-    return import.meta.env.PUBLIC_API_URL || 'http://localhost:8090';
+  const apiBase = import.meta.env.PUBLIC_API_URL || '';
+  
+  if (apiBase) {
+    return apiBase;
   }
   
-  // In production, use the environment variable or fall back to /api
-  const apiHost = import.meta.env.PUBLIC_API_HOST || 'api.localhavencms.com';
-  const apiPort = import.meta.env.PUBLIC_API_PORT;
-  
-  return apiPort ? `http://${apiHost}:${apiPort}` : `http://${apiHost}`;
+  if (import.meta.env.DEV) {
+    return 'http://localhost:8090';
+  }
+
+  return '/api';  // Will be handled by Nginx proxy in production
 }
 
 export const config: Config = {
