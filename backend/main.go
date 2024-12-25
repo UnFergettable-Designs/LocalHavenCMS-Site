@@ -332,24 +332,38 @@ func main() {
 
 	router := gin.Default()
 
-	// Updated CORS middleware with secure settings
 	router.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		if origin == "" {
-			origin = "*"
+		allowedOrigins := []string{
+			"http://localhost:3000",
+			"https://localhavencms.com",
+			"https://www.localhavencms.com",
+			"https://api.localhavencms.com",
 		}
 
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			for _, allowedOrigin := range allowedOrigins {
+				if origin == allowedOrigin {
+					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
+		}
+
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 
-		// Handle preflight
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
+
+		// Set security headers
+		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
+		c.Writer.Header().Set("X-Frame-Options", "DENY")
+		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
 
 		c.Next()
 	})

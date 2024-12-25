@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import AnalyticsPage from '../components/AnalyticsPage.svelte';
 
 export const prerender = false;
+
 // Simple server-side authentication check
 const token = Astro.cookies.get('token')?.value;
 if (!token) {
