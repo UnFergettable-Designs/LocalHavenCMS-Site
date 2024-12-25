@@ -25,16 +25,14 @@ RUN mkdir -p /tmp/nginx && \
     rm -rf /usr/share/nginx/html/* && \
     chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 
-# Only copy the single nginx config file
+# Copy nginx config and entrypoint script
 COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copy built assets
-COPY --from=builder /app/dist /usr/share/nginx/html
-RUN chown -R nginx:nginx /usr/share/nginx/html
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Switch to non-root user
 USER nginx
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
