@@ -73,6 +73,7 @@
 
   async function handleSubmit() {
     try {
+      console.log('API URL:', config.apiUrl);
       console.log('Submitting form data:', formData);
 
       const response = await fetch(`${config.apiUrl}/survey`, {
@@ -81,6 +82,8 @@
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
+        credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify({
           role: formData.role,
           otherRole: formData.otherRole,
@@ -94,16 +97,17 @@
 
       console.log('Response status:', response.status);
 
-      const result = await response.json();
-      console.log('Response data:', result);
-
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to submit survey');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(errorText || 'Failed to submit survey');
       }
 
+      const result = await response.json();
+      console.log('Success response:', result);
       currentStep = 3;
     } catch (error: any) {
-      console.error('Error submitting survey:', error);
+      console.error('Error details:', error);
       alert(`Failed to submit survey: ${error.message}`);
     }
   }

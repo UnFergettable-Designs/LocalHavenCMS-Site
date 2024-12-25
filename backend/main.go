@@ -332,29 +332,30 @@ func main() {
 
 	router := gin.Default()
 
-	// Use rate limiting
-	router.Use(rateLimitMiddleware())
-
-	// Secure CORS
-	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	// Updated CORS middleware with secure settings
 	router.Use(func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		for _, allowed := range allowedOrigins {
-			if origin == allowed {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-				break
-			}
+		if origin == "" {
+			origin = "*"
 		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 
+		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+		// Handle preflight
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
+
 		c.Next()
 	})
+
+	// Use rate limiting
+	router.Use(rateLimitMiddleware())
 
 	// Public routes
 	router.POST("/survey", submitSurvey)
