@@ -2,13 +2,13 @@ interface Config {
   apiUrl: string;
 }
 
-function getApiUrl() {
-  const url = import.meta.env.VITE_API_URL;
-  if (!url) {
-    console.warn('VITE_API_URL not set, using default');
-    return 'http://localhost:8090';
+function getApiUrl(): string {
+  if (import.meta.env.DEV) {
+    return import.meta.env.PUBLIC_API_URL || 'http://localhost:8090';
   }
-  return url;
+  
+  // In production, use relative URL to respect the current domain
+  return '/api';
 }
 
 export const config: Config = {

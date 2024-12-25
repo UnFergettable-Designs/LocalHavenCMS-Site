@@ -340,6 +340,9 @@ func main() {
 			"https://api.localhavencms.com",
 		}
 
+		// Log the incoming request details for debugging
+		log.Printf("Incoming request from: %s to: %s", c.Request.Host, c.Request.URL.Path)
+
 		origin := c.Request.Header.Get("Origin")
 		if origin != "" {
 			for _, allowedOrigin := range allowedOrigins {
@@ -375,9 +378,13 @@ func main() {
 	router.POST("/survey", submitSurvey)
 	router.POST("/login", login)
 
-	// Add health check endpoint
+	// Add explicit health check logging
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+		log.Printf("Health check from: %s", c.Request.Host)
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+			"host":   c.Request.Host,
+		})
 	})
 
 	// Protected routes
