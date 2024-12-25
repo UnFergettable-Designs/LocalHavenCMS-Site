@@ -11,7 +11,9 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source files and build
 COPY . .
-RUN pnpm build
+RUN pnpm build && \
+    ls -la dist && \
+    chmod -R 755 dist
 
 # Production image
 FROM nginx:alpine
@@ -22,7 +24,10 @@ RUN mkdir -p /tmp/nginx && \
     mkdir -p /var/log/nginx && \
     mkdir -p /tmp/client_temp /tmp/proxy_temp /tmp/fastcgi_temp /tmp/uwsgi_temp /tmp/scgi_temp && \
     chmod 777 -R /tmp/nginx /var/cache/nginx /var/log/nginx /tmp && \
-    rm -rf /usr/share/nginx/html/* 
+    rm -rf /usr/share/nginx/html/* && \
+    mkdir -p /usr/share/nginx/html && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
 
 # Copy nginx config and entrypoint script
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -32,10 +37,10 @@ RUN chmod +x /docker-entrypoint.sh && \
     chown -R nginx:nginx /etc/nginx /var/cache/nginx /var/log/nginx
 
 # Copy built assets and set permissions
-COPY --from=builder /app/dist /usr/share/nginx/html/
+COPY --from=builder /app/dist/* /usr/share/nginx/html/
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chmod -R 755 /usr/share/nginx/html && \
-    chmod 755 /usr/share/nginx/html
+    ls -la /usr/share/nginx/html
 
 # Create a directory for temporary nginx config
 RUN mkdir -p /tmp/nginx-temp && \
