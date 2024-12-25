@@ -29,11 +29,12 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh && \
     chmod 644 /etc/nginx/nginx.conf && \
-    chown -R nginx:nginx /etc/nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
+    chown -R nginx:nginx /etc/nginx /var/cache/nginx /var/log/nginx
 
-# Copy built assets
-COPY --from=builder /app/dist /usr/share/nginx/html
-RUN chown -R nginx:nginx /usr/share/nginx/html
+# Copy built assets and set permissions
+COPY --from=builder /app/dist /usr/share/nginx/html/
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
 
 # Create a directory for temporary nginx config
 RUN mkdir -p /tmp/nginx-temp && \
