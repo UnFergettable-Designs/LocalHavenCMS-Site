@@ -313,6 +313,21 @@ type User struct {
 	Password string `json:"password"`
 }
 
+func verifyToken(c *gin.Context) {
+	// The AuthMiddleware already verified the token
+	// We just need to return a success response
+	username, exists := c.Get("username")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"valid":    true,
+		"username": username,
+	})
+}
+
 func main() {
 	// Set Gin mode based on environment
 	if getEnvWithFallback("ENVIRONMENT", "development") == "production" {
@@ -392,6 +407,7 @@ func main() {
 	authorized.Use(AuthMiddleware())
 	{
 		authorized.GET("/results", getSurveyResults)
+		authorized.GET("/verify", verifyToken)
 	}
 
 	port := os.Getenv("PORT")

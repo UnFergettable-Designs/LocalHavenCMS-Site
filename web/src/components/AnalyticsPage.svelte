@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { auth } from '../stores/auth';
+  import { config } from '../config';
   import type { SurveyResponse } from '../types/Survey';
 
   let surveyResults: SurveyResponse[] = [];
@@ -8,9 +9,34 @@
   let error = '';
 
   onMount(async () => {
+    const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token ? 'exists' : 'missing');
+
+    if (!token) {
+      console.log('No token found, redirecting to login');
+      window.location.href = '/login';
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://api.localhavencms.com/results', {
+      // First verify the token
+      console.log('Verifying token...');
+      const verifyResponse = await fetch(`${config.apiUrl}/verify`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!verifyResponse.ok) {
+        console.log('Token verification failed');
+        auth.logout();
+        window.location.href = '/login';
+        return;
+      }
+
+      // Then fetch survey results
+      console.log('Token verified, fetching results...');
+      const response = await fetch(`${config.apiUrl}/results`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -18,6 +44,7 @@
 
       if (!response.ok) {
         if (response.status === 401) {
+          console.log('Unauthorized when fetching results');
           auth.logout();
           window.location.href = '/login';
           return;
@@ -26,9 +53,10 @@
       }
 
       surveyResults = await response.json();
+      console.log('Results fetched successfully');
     } catch (e) {
       error = 'Failed to load survey results';
-      console.error(e);
+      console.error('Error:', e);
     } finally {
       loading = false;
     }

@@ -23,6 +23,15 @@
         "licenses": []
       },
       "semver": {}
+    },
+    "services": {
+      "docker": {
+        "command": "open -a Docker",
+        "vars": null,
+        "is-daemon": null,
+        "shutdown": null,
+        "systems": null
+      }
     }
   },
   "packages": [
