@@ -36,8 +36,6 @@ services:
       - API_HOST=backend
       - API_PORT=8090
       - API_PROTOCOL=https
-    ports:
-      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
