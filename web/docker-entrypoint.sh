@@ -3,7 +3,7 @@
 # Set default values for environment variables
 : "${API_HOST:=backend}"
 : "${API_PORT:=8090}"
-: "${API_PROTOCOL:=https}"
+: "${API_PROTOCOL:=http}"
 
 # Replace environment variables in nginx.conf
 envsubst '${API_HOST} ${API_PORT} ${API_PROTOCOL}' < /etc/nginx/nginx.conf > /tmp/nginx-temp/nginx.conf.tmp
