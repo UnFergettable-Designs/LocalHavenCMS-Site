@@ -243,6 +243,23 @@ func getSurveyResults(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
+func deleteResult(c *gin.Context) {
+	id := c.Param("id")
+	stmt, err := db.Prepare("DELETE FROM survey_responses WHERE id = ?")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Result deleted"})
+}
+
 func login(c *gin.Context) {
 	var user User
 	if err := c.BindJSON(&user); err != nil {
@@ -328,6 +345,22 @@ func verifyToken(c *gin.Context) {
 	})
 }
 
+func getTrustedProxies() []string {
+	// Get from environment variable, fallback to Docker network ranges
+	trustedProxies := os.Getenv("TRUSTED_PROXIES")
+	if trustedProxies != "" {
+		return strings.Split(trustedProxies, ",")
+	}
+
+	// Default Docker network ranges
+	return []string{
+		"172.16.0.0/12",  // Docker default
+		"192.168.0.0/16", // Docker default
+		"10.0.0.0/8",     // Docker default
+		"127.0.0.1",      // Localhost
+	}
+}
+
 func main() {
 	// Set Gin mode based on environment
 	if getEnvWithFallback("ENVIRONMENT", "development") == "production" {
@@ -346,6 +379,11 @@ func main() {
 	defer db.Close()
 
 	router := gin.Default()
+
+	// Set trusted proxies
+	if err := router.SetTrustedProxies(getTrustedProxies()); err != nil {
+		log.Printf("Warning: Failed to set trusted proxies: %v", err)
+	}
 
 	router.Use(func(c *gin.Context) {
 		allowedOrigins := []string{
@@ -408,6 +446,7 @@ func main() {
 	{
 		authorized.GET("/results", getSurveyResults)
 		authorized.GET("/verify", verifyToken)
+		authorized.DELETE("/results/:id", deleteResult)
 	}
 
 	port := os.Getenv("PORT")

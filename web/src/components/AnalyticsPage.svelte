@@ -7,6 +7,7 @@
   let surveyResults: SurveyResponse[] = [];
   let loading = true;
   let error = '';
+  let deletingIds: Set<string> = new Set();
 
   onMount(async () => {
     const token = localStorage.getItem('token');
@@ -61,6 +62,32 @@
       loading = false;
     }
   });
+
+  async function deleteResult(id: string) {
+    try {
+      deletingIds.add(id);
+      deletingIds = deletingIds; // trigger reactivity
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.apiUrl}/results/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete result');
+      }
+
+      surveyResults = surveyResults.filter((result) => result.id !== id);
+    } catch (e) {
+      error = 'Failed to delete result';
+      console.error('Error:', e);
+    } finally {
+      deletingIds.delete(id);
+      deletingIds = deletingIds; // trigger reactivity
+    }
+  }
 </script>
 
 <div class="analytics-container">
@@ -89,6 +116,16 @@
           {#if result.betaInterest}
             <p class="beta-interest">Interested in Beta Program</p>
           {/if}
+          {#if result.email}
+            <p><strong>Email:</strong> {result.email}</p>
+          {/if}
+          <button on:click={() => deleteResult(result.id)} disabled={deletingIds.has(result.id)}>
+            {#if deletingIds.has(result.id)}
+              Deleting...
+            {:else}
+              Delete
+            {/if}
+          </button>
         </div>
       {/each}
     </div>
@@ -140,5 +177,10 @@
 
   li {
     margin-bottom: 0.5rem;
+  }
+
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 </style>
