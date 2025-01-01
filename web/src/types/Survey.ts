@@ -15,6 +15,25 @@ export interface SurveyResponse {
   };
   betaInterest: boolean;
   email?: string;
+  // New fields
+  biggestFrustrations: string;
+  specificProblems: string;
+  usageFrequency: string;
+  primaryPurpose: string;
+  platforms: string;
+  cmsPreference: string;
+  wishedFeatures: string;
+  workflowImportance: string;
+  teamSize: string;
+  collaborationFrequency: string;
+  pricingSensitivity: string;
+  pricingModel: string;
+  integrations: string;
+  integrationImportance: string;
+  contentTypes: string;
+  customFormats: string;
+  feedbackSuggestions: string;
+  excitementFactors: string;
 }
 
 export interface FeatureAverages {
