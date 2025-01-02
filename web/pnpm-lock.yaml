@@ -18,7 +18,7 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(jiti@2.4.2)(rollup@4.29.1)(typescript@5.7.2)
       chart.js:
-        specifier: ^4.4.7
+        specifier: ^4.4.1
         version: 4.4.7
       lucide-svelte:
         specifier: ^0.469.0
@@ -26,9 +26,6 @@ importers:
       svelte:
         specifier: ^5.15.0
         version: 5.15.0
-      svelte-chartjs:
-        specifier: ^3.1.5
-        version: 3.1.5(chart.js@4.4.7)(svelte@5.15.0)
       typescript:
         specifier: ^5.7.2
         version: 5.7.2
@@ -2154,12 +2151,6 @@ packages:
   supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
-
-  svelte-chartjs@3.1.5:
-    resolution: {integrity: sha512-ka2zh7v5FiwfAX1oMflZ0HkNkgjHjFqANgRyC+vNYXfxtx2ku68Zo+2KgbKeBH2nS1ThDqkIACPzGxy4T0UaoA==}
-    peerDependencies:
-      chart.js: ^3.5.0 || ^4.0.0
-      svelte: ^4.0.0
 
   svelte-eslint-parser@0.43.0:
     resolution: {integrity: sha512-GpU52uPKKcVnh8tKN5P4UZpJ/fUDndmq7wfsvoVXsyP+aY0anol7Yqo01fyrlaWGMFfm4av5DyrjlaXdLRJvGA==}
@@ -4845,11 +4836,6 @@ snapshots:
   supports-color@7.2.0:
     dependencies:
       has-flag: 4.0.0
-
-  svelte-chartjs@3.1.5(chart.js@4.4.7)(svelte@5.15.0):
-    dependencies:
-      chart.js: 4.4.7
-      svelte: 5.15.0
 
   svelte-eslint-parser@0.43.0(svelte@5.15.0):
     dependencies:

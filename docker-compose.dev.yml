@@ -7,7 +7,7 @@ services:
       - JWT_SECRET=local_dev_secret
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=password
-      - ALLOWED_ORIGINS=http://localhost:8080
+      - ALLOWED_ORIGINS=http://localhost:4321
       - ENVIRONMENT=development
       - PORT=8090
     volumes:
@@ -27,16 +27,21 @@ services:
       retries: 3
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      target: development
     ports:
-      - "8080:80"
+      - "4321:4321"
     environment:
-      - API_HOST=backend
-      - API_PORT=8090
-      - API_PROTOCOL=http
+      - PUBLIC_API_URL=http://localhost:8090
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
+    command: pnpm dev --host
     depends_on:
       backend:
         condition: service_healthy
 
 volumes:
   backend_data:
+  web_node_modules:

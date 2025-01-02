@@ -1,8 +1,218 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import LandingPage from '../components/LandingPage.svelte';
+import type { FormField } from '../types/Survey';
+
+const formFields: FormField[] = [
+  { 
+    id: 'role',
+    label: 'What is your role?',
+    type: 'select',
+    name: 'role',
+    required: true,
+    options: ['Developer', 'Content Editor', 'Manager', 'Designer', 'Other']
+  },
+  { 
+    id: 'otherRole',
+    label: 'Please specify your role',
+    type: 'text',
+    name: 'otherRole',
+    dependsOn: 'role',
+    dependsOnValue: 'Other'
+  },
+  { 
+    id: 'cmsUsage',
+    label: 'Which CMS do you currently use?',
+    type: 'select',
+    name: 'cmsUsage',
+    required: true,
+    options: ['WordPress', 'Drupal', 'Custom Solution', 'None', 'Other']
+  },
+  { 
+    id: 'otherCmsUsage',
+    label: 'If other CMS, please specify',
+    type: 'text',
+    name: 'otherCmsUsage',
+    dependsOn: 'cmsUsage',
+    dependsOnValue: 'Other'
+  },
+  { 
+    id: 'usageFrequency',
+    label: 'How often do you use your CMS?',
+    type: 'select',
+    name: 'usageFrequency',
+    required: true,
+    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
+  },
+  { 
+    id: 'primaryPurpose',
+    label: 'Primary purpose for using a CMS',
+    type: 'text',
+    name: 'primaryPurpose',
+    required: true
+  },
+  { 
+    id: 'platforms',
+    label: 'Which platforms do you typically work with?',
+    type: 'text',
+    name: 'platforms',
+    required: true
+  },
+  { 
+    id: 'cmsPreference',
+    label: 'What do you look for in a CMS?',
+    type: 'textarea',
+    name: 'cmsPreference'
+  },
+  { 
+    id: 'biggestFrustrations',
+    label: 'Biggest frustrations with current CMS',
+    type: 'textarea',
+    name: 'biggestFrustrations'
+  },
+  { 
+    id: 'specificProblems',
+    label: 'Specific problems you want solved',
+    type: 'textarea',
+    name: 'specificProblems'
+  },
+  { 
+    id: 'wishedFeatures',
+    label: 'Features you wish you had',
+    type: 'textarea',
+    name: 'wishedFeatures'
+  },
+  { 
+    id: 'teamSize',
+    label: 'What is your team size?',
+    type: 'select',
+    name: 'teamSize',
+    required: true,
+    options: ['Solo', '2-5', '6-10', '11-20', '20+']
+  },
+  { 
+    id: 'collaborationFrequency',
+    label: 'How often do you collaborate?',
+    type: 'select',
+    name: 'collaborationFrequency',
+    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
+  },
+  { 
+    id: 'pricingSensitivity',
+    label: 'Expected pricing range',
+    type: 'select',
+    name: 'pricingSensitivity',
+    options: ['Free', '$1-50/mo', '$51-200/mo', '$201-500/mo', '$500+/mo']
+  },
+  { 
+    id: 'pricingModel',
+    label: 'Preferred pricing model',
+    type: 'select',
+    name: 'pricingModel',
+    options: ['Subscription', 'One-time purchase', 'Free/Open Source', 'Other']
+  },
+  { 
+    id: 'integrations',
+    label: 'Required integrations',
+    type: 'textarea',
+    name: 'integrations'
+  },
+  { 
+    id: 'integrationImportance',
+    label: 'How important are integrations?',
+    type: 'select',
+    name: 'integrationImportance',
+    options: ['Critical', 'Important', 'Nice to have', 'Not important']
+  },
+  { 
+    id: 'contentTypes',
+    label: 'Content types you work with',
+    type: 'textarea',
+    name: 'contentTypes'
+  },
+  { 
+    id: 'customFormats',
+    label: 'Custom format requirements',
+    type: 'textarea',
+    name: 'customFormats'
+  },
+  { 
+    id: 'feedbackSuggestions',
+    label: 'Additional feedback',
+    type: 'textarea',
+    name: 'feedbackSuggestions'
+  },
+  { 
+    id: 'excitementFactors',
+    label: 'What excites you about a new CMS?',
+    type: 'textarea',
+    name: 'excitementFactors'
+  },
+    { 
+    id: 'betaInterest',
+    label: 'Would you like to participate in beta testing?',
+    type: 'checkbox',
+    name: 'betaInterest'
+  },
+  { 
+    id: 'email',
+    label: 'Email address for beta testing',
+    type: 'email',
+    name: 'email',
+    dependsOn: 'betaInterest',
+    dependsOnValue: true
+  },
+  { 
+    id: 'features.offline',
+    label: 'Rate the importance of offline capability',
+    type: 'radio',
+    name: 'features.offline',
+    required: true,
+    options: ['1', '2', '3', '4', '5']
+  },
+  { 
+    id: 'features.collaboration',
+    label: 'How important is real-time collaboration? (1-5)',
+    type: 'radio',
+    name: 'features.collaboration',
+    required: true,
+    options: ['1', '2', '3', '4', '5']
+  },
+  { 
+    id: 'features.assetManagement',
+    label: 'How important is asset management? (1-5)',
+    type: 'radio',
+    name: 'features.assetManagement',
+    required: true,
+    options: ['1', '2', '3', '4', '5']
+  },
+  { 
+    id: 'features.pdfHandling',
+    label: 'How important is PDF handling? (1-5)',
+    type: 'radio',
+    name: 'features.pdfHandling',
+    required: true,
+    options: ['1', '2', '3', '4', '5']
+  },
+  { 
+    id: 'features.versionControl',
+    label: 'How important is version control? (1-5)',
+    type: 'radio',
+    name: 'features.versionControl',
+    required: true,
+    options: ['1', '2', '3', '4', '5']
+  },
+  { 
+    id: 'features.workflows',
+    label: 'How important are customizable workflows? (1-5)',
+    type: 'radio',
+    name: 'features.workflows',
+    required: true,
+    options: ['1', '2', '3', '4', '5']
+  }
+];
 ---
 
 <Layout title="LocalHaven CMS">
-  <LandingPage client:load />
+  <LandingPage client:load {formFields} />
 </Layout>

@@ -1,45 +1,25 @@
 <script lang="ts">
   import { Clock, Users, Cloud, Code, ArrowRight, CheckCircle } from 'lucide-svelte';
+  import type { FormField, SurveyResponse } from '../types/Survey';
+  import type { ComponentType } from 'svelte';
   import LocalHavenLogo from '../assets/LocalHavenCMS.webp';
+  import SurveyForm from './SurveyForm.svelte';
   import { config } from '../config';
 
-  interface FormData {
-    role: string;
-    otherRole: string;
-    cmsUsage: string;
-    otherCmsUsage: string;
-    features: {
-      [key: string]: number;
-      offline: number;
-      collaboration: number;
-      assetManagement: number;
-      pdfHandling: number;
-      versionControl: number;
-      workflows: number;
-    };
-    betaInterest: boolean | null;
-    email: string;
-  }
+  export let formFields: FormField[];
 
   let currentStep = 0;
-  let formData: FormData = {
-    role: '',
-    otherRole: '',
-    cmsUsage: '',
-    otherCmsUsage: '',
-    features: {
-      offline: 0,
-      collaboration: 0,
-      assetManagement: 0,
-      pdfHandling: 0,
-      versionControl: 0,
-      workflows: 0,
-    },
-    betaInterest: null,
-    email: '',
-  };
+  let isSubmitting = false;
+  let errorMessage = '';
+  let formData: Partial<SurveyResponse> = {};
 
-  const features = [
+  interface Feature {
+    icon: ComponentType;
+    title: string;
+    description: string;
+  }
+
+  const features: Feature[] = [
     {
       icon: Clock,
       title: 'Work Anywhere',
@@ -62,64 +42,40 @@
     },
   ];
 
-  const featureLabels = {
-    offline: 'Offline Capabilities',
-    collaboration: 'Real-time Collaboration',
-    assetManagement: 'Asset Management',
-    pdfHandling: 'PDF Handling',
-    versionControl: 'Version Control',
-    workflows: 'Approval Workflows',
-  };
-
-  let isSubmitting = false;
-  let errorMessage = '';
-
-  async function handleSubmit() {
+  async function handleSubmit(data: SurveyResponse): Promise<void> {
     try {
       isSubmitting = true;
       errorMessage = '';
+      formData = data;
 
       if (!config.apiUrl) {
         throw new Error('API URL is not configured');
       }
 
-      const apiUrl = config.apiUrl.replace(/\/$/, ''); // Remove trailing slash if present
-      console.log('Submitting to:', `${apiUrl}/survey`);
-
-      const response = await fetch(`${apiUrl}/survey`, {
+      const response = await fetch(`${config.apiUrl}/survey`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         mode: 'cors',
-        body: JSON.stringify({
-          role: formData.role,
-          otherRole: formData.otherRole,
-          cmsUsage: formData.cmsUsage,
-          otherCmsUsage: formData.otherCmsUsage,
-          features: formData.features,
-          betaInterest: formData.betaInterest ?? false,
-          email: formData.email,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Server responded with status: ${response.status}`);
+        throw new Error(
+          (await response.text()) || `Server responded with status: ${response.status}`
+        );
       }
 
-      const result = await response.json();
-      console.log('Success:', result);
-      currentStep = 3;
-    } catch (error: any) {
-      console.error('Submission error:', error);
-      errorMessage = error.message || 'Failed to submit survey. Please try again.';
+      currentStep = 5; // Move to success step
+    } catch (error: unknown) {
+      errorMessage =
+        error instanceof Error ? error.message : 'Failed to submit survey. Please try again.';
+      throw error;
     } finally {
       isSubmitting = false;
     }
   }
 
-  function scrollToSurvey() {
+  function scrollToSurvey(): void {
     document.getElementById('survey')?.scrollIntoView({ behavior: 'smooth' });
   }
 </script>
@@ -161,114 +117,18 @@
         <div class="survey-content">
           <h2 class="survey-title">Help Shape the Future of LocalHaven CMS</h2>
 
-          {#if currentStep < 3}
+          {#if currentStep < 6}
             <div class="step-container">
-              {#each [0, 1, 2] as step}
+              {#each [0, 1, 2, 3, 4, 5] as step}
                 <div
                   class="step-indicator {step <= currentStep ? 'step-active' : 'step-inactive'}"
                 ></div>
               {/each}
             </div>
 
-            {#if currentStep === 0}
-              <div class="space-y-4">
-                <div>
-                  <label class="label"
-                    >What is your primary role?
-                    <select class="role-select" bind:value={formData.role}>
-                      <option value="marketer">Marketer</option>
-                      <option value="developer">Developer</option>
-                      <option value="designer">Designer</option>
-                      <option value="content">Content</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  {#if formData.role === 'other'}
-                    <div class="mt-2">
-                      <input
-                        type="text"
-                        placeholder="Please specify"
-                        class="input-text"
-                        bind:value={formData.otherRole}
-                      />
-                    </div>
-                  {/if}
-                </div>
+            <SurveyForm {formFields} bind:currentStep {isSubmitting} onSubmit={handleSubmit} />
 
-                <div>
-                  <label class="label"
-                    >How often do you use a CMS?
-                    <select class="cms-usage-select" bind:value={formData.cmsUsage}>
-                      <option value="">Select frequency...</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="rarely">Rarely</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  {#if formData.cmsUsage === 'other'}
-                    <div class="mt-2">
-                      <input
-                        type="text"
-                        placeholder="Please specify"
-                        class="input-text"
-                        bind:value={formData.otherCmsUsage}
-                      />
-                    </div>
-                  {/if}
-                </div>
-              </div>
-            {:else if currentStep === 1}
-              <div class="space-y-4">
-                {#each Object.entries(featureLabels) as [feature, label]}
-                  <div>
-                    <label class="label">
-                      {label}
-                      <div class="flex gap-2">
-                        {#each [1, 2, 3, 4, 5] as value}
-                          {@const currentFeature = formData.features[feature]}
-                          <button
-                            class="feature-button"
-                            class:active={currentFeature === value}
-                            on:click={() => (formData.features[feature] = value)}
-                          >
-                            {value}
-                          </button>
-                        {/each}
-                      </div>
-                    </label>
-                  </div>
-                {/each}
-              </div>
-            {:else}
-              <div class="space-y-4">
-                <div>
-                  <label class="label"
-                    >Would you like to join our beta program?
-                    <div class="radio-group">
-                      <input type="radio" value={true} bind:group={formData.betaInterest} /> Yes
-                      <input type="radio" value={false} bind:group={formData.betaInterest} /> No
-                    </div>
-                  </label>
-                </div>
-                {#if formData.betaInterest}
-                  <div>
-                    <label class="label"
-                      >Email Address
-                      <input
-                        type="email"
-                        class="input-text"
-                        bind:value={formData.email}
-                        placeholder="Enter your email"
-                      />
-                    </label>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-
-            <div class="flex justify-between mt-6">
+            <!-- <div class="nav-buttons">
               {#if currentStep > 0}
                 <button
                   class="button-secondary"
@@ -280,36 +140,28 @@
               {/if}
               <button
                 class="button-primary"
-                on:click={() => {
-                  if (currentStep === 2) {
-                    handleSubmit();
-                  } else {
-                    currentStep++;
-                  }
-                }}
+                on:click={() => (currentStep < 4 ? currentStep++ : null)}
                 disabled={isSubmitting}
               >
                 {#if isSubmitting}
                   Submitting...
                 {:else}
-                  {currentStep === 2 ? 'Submit' : 'Next'}
-                  <ArrowRight size={16} class="ml-2" />
+                  {currentStep === 4 ? 'Submit' : 'Next'}
+                  <svelte:component this={ArrowRight} size={16} class="icon-right" />
                 {/if}
               </button>
-            </div>
+            </div> -->
 
             {#if errorMessage}
-              <div class="error-message mt-4">
-                {errorMessage}
-              </div>
+              <div class="error-message">{errorMessage}</div>
             {/if}
           {:else}
-            <div class="text-center section-padding">
-              <CheckCircle size={64} class="success-icon" />
-              <h3 class="text-2xl font-semibold mb-2">Thank You!</h3>
-              <p class="gray-text">Your feedback will help us build a better LocalHaven CMS.</p>
+            <div class="success-message">
+              <svelte:component this={CheckCircle} size={64} class="success-icon" />
+              <h3 class="success-title">Thank You!</h3>
+              <p class="success-text">Your feedback will help us build a better LocalHaven CMS.</p>
               {#if formData.betaInterest}
-                <p class="mt-4 success-text">We'll be in touch about the beta program soon!</p>
+                <p class="beta-text">We'll be in touch about the beta program soon!</p>
               {/if}
             </div>
           {/if}
@@ -381,18 +233,24 @@
     background-color: #f9fafb;
   }
 
-  .button-secondary {
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    border: 1px solid #d1d5db;
-    background-color: white;
-    color: #374151;
-    cursor: pointer;
+  .success-message {
+    text-align: center;
+    padding: 2rem 0;
   }
 
-  .button-secondary:hover {
-    background-color: #f3f4f6;
+  .success-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .success-text {
+    color: #6b7280;
+  }
+
+  .beta-text {
+    margin-top: 1rem;
+    color: #047857;
   }
 
   .container {
@@ -481,116 +339,6 @@
 
   .step-inactive {
     background-color: #e5e7eb; /* gray-200 */
-  }
-
-  .label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-  }
-
-  .role-select,
-  .cms-usage-select,
-  .input-text {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-  }
-
-  .feature-button {
-    padding: 0.5rem;
-    width: 2rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    cursor: pointer;
-  }
-
-  .feature-button.active {
-    background-color: #059669;
-    color: white;
-  }
-
-  .radio-group {
-    display: flex;
-    gap: 1rem;
-  }
-
-  .footer {
-    text-align: center;
-    padding: 1rem;
-    background-color: #f9fafb;
-    color: #6b7280;
-  }
-
-  .space-y-4 > * + * {
-    margin-top: 1rem;
-  }
-
-  .mt-2 {
-    margin-top: 0.5rem;
-  }
-
-  .mt-4 {
-    margin-top: 1rem;
-  }
-
-  .mt-6 {
-    margin-top: 1.5rem;
-  }
-
-  .mb-2 {
-    margin-bottom: 0.5rem;
-  }
-
-  .mb-4 {
-    margin-bottom: 1rem;
-  }
-
-  .ml-2 {
-    margin-left: 0.5rem;
-  }
-
-  .flex {
-    display: flex;
-  }
-
-  .gap-2 {
-    gap: 0.5rem;
-  }
-
-  .justify-between {
-    justify-content: space-between;
-  }
-
-  .text-center {
-    text-align: center;
-  }
-
-  .text-2xl {
-    font-size: 1.5rem;
-  }
-
-  .font-semibold {
-    font-weight: 600;
-  }
-
-  .success-icon {
-    color: #059669;
-    margin: 0 auto 1rem auto;
-  }
-
-  .success-text {
-    color: #059669;
-  }
-
-  .gray-text {
-    color: #6b7280;
-  }
-
-  .section-padding {
-    padding: 2rem 0;
   }
 
   .visually-hidden {

@@ -2,6 +2,29 @@
 build/
 build.log
 
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.output/
+
+# Environment variables
+.env
 backend/.env
+
+# Database
+data/
+*.db
 backend/localhavencms.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
 backend/server

@@ -1,5 +1,11 @@
 <script lang="ts">
+  interface AuthStore {
+    login: (username: string, password: string) => Promise<boolean>;
+    logout: () => void;
+  }
+
   import { auth } from '../stores/auth';
+  const typedAuth = auth as AuthStore;
 
   let username = '';
   let password = '';
@@ -11,7 +17,7 @@
     error = '';
 
     try {
-      const success = await auth.login(username, password);
+      const success = await typedAuth.login(username, password);
       if (success) {
         // Use window.location for client-side navigation
         window.location.href = '/analytics';

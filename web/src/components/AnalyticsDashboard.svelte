@@ -1,187 +1,255 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type {
-    SurveyResponse,
-    FeatureAverages,
-    RoleDistribution,
-    UsageDistribution,
-  } from '../types/Survey';
   import { config } from '../config';
-  import { Bar } from 'svelte-chartjs';
-  import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-  } from 'chart.js';
+  import Chart from 'chart.js/auto';
+  import type { ChartData, ChartOptions, ChartType, Chart as ChartInstance } from 'chart.js';
+  import type { SurveyResponse, Features, DashboardMetrics } from '../types/Survey';
 
-  ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
-  let surveys: SurveyResponse[] = [];
-  let isLoading = true;
-  let error = '';
-
-  let featureAverages: FeatureAverages = {};
-  let roleDistribution: RoleDistribution = {};
-  let usageDistribution: UsageDistribution = {};
-  let betaInterestCount = 0;
-  let totalResponses = 0;
-
-  const featureLabels = {
-    offline: 'Offline Capabilities',
-    collaboration: 'Real-time Collaboration',
-    assetManagement: 'Asset Management',
-    pdfHandling: 'PDF Handling',
-    versionControl: 'Version Control',
-    workflows: 'Approval Workflows',
-  };
-
-  onMount(async () => {
-    try {
-      const response = await fetch(`${config.apiUrl}/surveys`);
-      if (!response.ok) throw new Error('Failed to fetch survey data');
-
-      surveys = await response.json();
-      calculateMetrics();
-    } catch (e) {
-      error = e.message;
-    } finally {
-      isLoading = false;
-    }
-  });
-
-  function calculateMetrics() {
-    totalResponses = surveys.length;
-    betaInterestCount = surveys.filter((s) => s.betaInterest).length;
-
-    // Calculate feature averages
-    const features = Object.keys(featureLabels);
-    features.forEach((feature) => {
-      const sum = surveys.reduce((acc, survey) => acc + survey.features[feature], 0);
-      featureAverages[feature] = Number((sum / totalResponses).toFixed(2));
-    });
-
-    // Calculate role distribution
-    surveys.forEach((survey) => {
-      const role = survey.role === 'other' ? survey.otherRole || 'Other' : survey.role;
-      roleDistribution[role] = (roleDistribution[role] || 0) + 1;
-    });
-
-    // Calculate usage distribution
-    surveys.forEach((survey) => {
-      const usage = survey.cmsUsage === 'other' ? survey.otherCmsUsage || 'Other' : survey.cmsUsage;
-      usageDistribution[usage] = (usageDistribution[usage] || 0) + 1;
-    });
+  interface TypedChartData extends ChartData {
+    labels: string[];
+    datasets: Array<{
+      label?: string;
+      data: number[];
+      backgroundColor: string | string[];
+    }>;
   }
 
-  $: featureChartData = {
-    labels: Object.values(featureLabels),
+  interface DashboardCharts {
+    feature?: ChartInstance<'bar', number[], string>;
+    role?: ChartInstance<'doughnut', number[], string>;
+    cms?: ChartInstance<'doughnut', number[], string>;
+    teamSize?: ChartInstance<'doughnut', number[], string>;
+    pricing?: ChartInstance<'doughnut', number[], string>;
+  }
+
+  export let surveyResults: SurveyResponse[] = [];
+
+  let metrics: DashboardMetrics = {
+    totalResponses: 0,
+    betaInterestCount: 0,
+    featureScores: {
+      offline: 0,
+      collaboration: 0,
+      assetManagement: 0,
+      pdfHandling: 0,
+      versionControl: 0,
+      workflows: 0,
+    },
+    distributions: {
+      roles: {},
+      cmsUsage: {},
+      teamSizes: {},
+      pricing: {},
+    },
+  };
+
+  let charts: DashboardCharts = {};
+
+  const chartOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 5,
+      },
+    },
+  };
+
+  const pieOptions: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+    },
+  };
+
+  let featureScoresChart: TypedChartData = {
+    labels: [],
     datasets: [
       {
-        label: 'Average Rating',
-        data: Object.keys(featureLabels).map((key) => featureAverages[key]),
-        backgroundColor: '#047857',
+        label: 'Feature Scores',
+        data: [],
+        backgroundColor: '#059669',
       },
     ],
   };
+
+  let roleDistributionChart: TypedChartData = {
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        backgroundColor: ['#059669', '#0891b2', '#6366f1', '#8b5cf6', '#ec4899'],
+      },
+    ],
+  };
+
+  onMount(() => {
+    initializeCharts();
+    return () => {
+      Object.values(charts).forEach((chart) => {
+        if (chart) chart.destroy();
+      });
+    };
+  });
+
+  function initializeCharts(): void {
+    const getContext = (id: string): CanvasRenderingContext2D | null => {
+      const canvas = document.getElementById(id) as HTMLCanvasElement;
+      return canvas?.getContext('2d');
+    };
+
+    const featureCtx = getContext('featureChart');
+    const roleCtx = getContext('roleChart');
+    const cmsCtx = getContext('cmsChart');
+    const teamSizeCtx = getContext('teamSizeChart');
+    const pricingCtx = getContext('pricingChart');
+
+    if (featureCtx) {
+      charts.feature = new Chart(featureCtx, {
+        type: 'bar',
+        data: featureScoresChart,
+        options: chartOptions,
+      });
+    }
+
+    if (roleCtx) {
+      charts.role = new Chart(roleCtx, {
+        type: 'doughnut',
+        data: roleDistributionChart,
+        options: pieOptions,
+      });
+    }
+
+    // ... similar for other charts
+  }
+
+  function calculateMetrics(): void {
+    metrics.totalResponses = surveyResults.length;
+    metrics.betaInterestCount = surveyResults.filter((s) => s.betaInterest).length;
+
+    for (const feature of Object.keys(metrics.featureScores) as Array<keyof Features>) {
+      metrics.featureScores[feature] =
+        surveyResults.reduce((sum, response) => sum + (response.features[feature] || 0), 0) /
+        metrics.totalResponses;
+    }
+
+    metrics.distributions = {
+      roles: calculateFrequencyDistribution(surveyResults.map((r) => r.role)),
+      cmsUsage: calculateFrequencyDistribution(surveyResults.map((r) => r.cmsUsage)),
+      teamSizes: calculateFrequencyDistribution(surveyResults.map((r) => r.teamSize)),
+      pricing: calculateFrequencyDistribution(surveyResults.map((r) => r.pricingModel)),
+    };
+  }
+
+  function calculateFrequencyDistribution(items: (string | undefined)[]): Record<string, number> {
+    return items.reduce(
+      (acc, item) => {
+        if (item) {
+          acc[item] = (acc[item] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+  }
+
+  $: if (surveyResults.length > 0) {
+    calculateMetrics();
+    updateCharts();
+  }
 </script>
 
 <div class="dashboard">
-  <h1>Survey Analytics Dashboard</h1>
-
-  {#if isLoading}
-    <div class="loading">Loading survey data...</div>
-  {:else if error}
-    <div class="error">{error}</div>
-  {:else}
-    <div class="metrics-grid">
+  {#if metrics}
+    <div class="metrics-summary">
       <div class="metric-card">
-        <h3>Total Responses</h3>
-        <p class="metric-value">{totalResponses}</p>
+        <h4>Total Responses</h4>
+        <p class="metric-value">{metrics.totalResponses}</p>
       </div>
       <div class="metric-card">
-        <h3>Beta Interest</h3>
-        <p class="metric-value">{betaInterestCount}</p>
-        <p class="metric-subtitle">
-          ({Math.round((betaInterestCount / totalResponses) * 100)}% of total)
-        </p>
+        <h4>Beta Interest</h4>
+        <p class="metric-value">{metrics.betaInterestCount} / {metrics.totalResponses}</p>
+      </div>
+    </div>
+  {/if}
+
+  <div class="chart-grid">
+    <div class="chart-container">
+      <h3>Feature Importance Ratings</h3>
+      <div class="chart">
+        <canvas id="featureChart"></canvas>
       </div>
     </div>
 
     <div class="chart-container">
-      <h2>Feature Importance Ratings</h2>
-      <Bar data={featureChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-    </div>
-
-    <div class="tables-grid">
-      <div class="table-container">
-        <h2>Role Distribution</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Role</th>
-              <th>Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each Object.entries(roleDistribution) as [role, count]}
-              <tr>
-                <td>{role}</td>
-                <td>{count}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="table-container">
-        <h2>CMS Usage</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Frequency</th>
-              <th>Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each Object.entries(usageDistribution) as [usage, count]}
-              <tr>
-                <td>{usage}</td>
-                <td>{count}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      <h3>Role Distribution</h3>
+      <div class="chart">
+        <canvas id="roleChart"></canvas>
       </div>
     </div>
-  {/if}
+
+    <div class="chart-container">
+      <h3>CMS Usage Distribution</h3>
+      <div class="chart">
+        <canvas id="cmsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h3>Team Size Distribution</h3>
+      <div class="chart">
+        <canvas id="teamSizeChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h3>Pricing Preferences</h3>
+      <div class="chart">
+        <canvas id="pricingChart"></canvas>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
   .dashboard {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 1rem;
   }
 
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    color: #111827;
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
   }
 
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+  .chart-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  h3 {
     color: #374151;
+    margin-bottom: 1rem;
+    text-align: center;
   }
 
-  .metrics-grid {
+  .chart {
+    height: 300px;
+    position: relative;
+  }
+
+  .metrics-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
@@ -192,70 +260,13 @@
     background: white;
     padding: 1.5rem;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
   }
 
   .metric-value {
     font-size: 2rem;
-    font-weight: 700;
-    color: #047857;
-  }
-
-  .metric-subtitle {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .chart-container {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    height: 400px;
-  }
-
-  .tables-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem;
-  }
-
-  .table-container {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  th {
     font-weight: 600;
-    color: #374151;
-  }
-
-  .loading {
-    text-align: center;
-    padding: 2rem;
-    color: #6b7280;
-  }
-
-  .error {
-    text-align: center;
-    padding: 2rem;
-    color: #dc2626;
-    background: #fee2e2;
-    border-radius: 0.5rem;
+    color: #059669;
   }
 </style>

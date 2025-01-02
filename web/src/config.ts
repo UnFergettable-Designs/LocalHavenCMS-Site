@@ -13,7 +13,7 @@ function getApiUrl(): string {
     return 'http://localhost:8090';
   }
 
-  return '/api';  // Will be handled by Nginx proxy in production
+  return '/api';
 }
 
 export const config: Config = {
