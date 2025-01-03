@@ -1,54 +1,50 @@
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
-COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source files and build
 COPY . .
-RUN pnpm build && \
-    ls -la dist && \
-    chmod -R 755 dist
+RUN pnpm build
 
-# Production image
-FROM nginx:alpine
+# Development stage
+FROM node:22-slim AS development
 
-# Create temp directories and set permissions
-RUN mkdir -p /tmp/nginx && \
-    mkdir -p /var/cache/nginx && \
-    mkdir -p /var/log/nginx && \
-    mkdir -p /tmp/client_temp /tmp/proxy_temp /tmp/fastcgi_temp /tmp/uwsgi_temp /tmp/scgi_temp && \
-    chmod 777 -R /tmp/nginx /var/cache/nginx /var/log/nginx /tmp && \
-    rm -rf /usr/share/nginx/html/* && \
-    mkdir -p /usr/share/nginx/html && \
-    chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html
+WORKDIR /app
 
-# Copy nginx config and entrypoint script
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh && \
-    chmod 644 /etc/nginx/nginx.conf && \
-    chown -R nginx:nginx /etc/nginx /var/cache/nginx /var/log/nginx
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy built assets and set permissions
-COPY --from=builder /app/dist/* /usr/share/nginx/html/
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html && \
-    ls -la /usr/share/nginx/html
+# Copy package files and install dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
 
-# Create a directory for temporary nginx config
-RUN mkdir -p /tmp/nginx-temp && \
-    chown -R nginx:nginx /tmp/nginx-temp && \
-    chmod 755 /tmp/nginx-temp
+# Copy source code
+COPY . .
 
-USER nginx
+# Expose dev server port
+EXPOSE 4321
+
+# Default to dev command (will be overridden in docker-compose.dev.yml)
+CMD ["pnpm", "dev", "--host"]
+
+# Production stage
+FROM nginx:alpine AS production
+
+# Copy built files from builder
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Add nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

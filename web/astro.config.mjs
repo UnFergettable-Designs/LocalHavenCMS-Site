@@ -7,9 +7,9 @@ import node from '@astrojs/node';
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [svelte({extensions: ['.svelte'] })],
+  integrations: [svelte({ extensions: ['.svelte'] })],
 
   adapter: node({
-    mode: 'standalone'
-  })
+    mode: 'standalone',
+  }),
 });

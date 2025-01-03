@@ -2,12 +2,33 @@
   import { onMount } from 'svelte';
   import { auth } from '../stores/auth';
   import { config } from '../config';
-  import type { SurveyResponse } from '../types/Survey';
+  import type { SurveyResponse, MetricsData, Features } from '../types/Survey';
+  import AnalyticsDashboard from './AnalyticsDashboard.svelte';
+
+  // Strongly type the distributions
+  type Distribution = Record<string, number>;
+  type FeatureScores = Record<keyof Features, number>;
 
   let surveyResults: SurveyResponse[] = [];
   let loading = true;
   let error = '';
   let deletingIds: Set<string> = new Set();
+
+  // Add new metrics
+  let totalResponses = 0;
+  let averageFeatureScores: FeatureScores = {
+    offline: 0,
+    collaboration: 0,
+    assetManagement: 0,
+    pdfHandling: 0,
+    versionControl: 0,
+    workflows: 0,
+  };
+  let roleDistribution: Distribution = {};
+  let cmsUsageDistribution: Distribution = {};
+  let usageFrequencyDistribution: Distribution = {};
+  let betaInterestCount = 0;
+  let metrics: MetricsData | null = null;
 
   onMount(async () => {
     const token = localStorage.getItem('token');
@@ -44,24 +65,75 @@
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          console.log('Unauthorized when fetching results');
-          auth.logout();
-          window.location.href = '/login';
-          return;
-        }
-        throw new Error('Failed to fetch survey results');
+        throw new Error('Failed to fetch results');
       }
 
       surveyResults = await response.json();
-      console.log('Results fetched successfully');
+      calculateMetrics();
     } catch (e) {
-      error = 'Failed to load survey results';
       console.error('Error:', e);
+      error = 'Failed to fetch survey results';
     } finally {
       loading = false;
     }
   });
+
+  function calculateMetrics(): void {
+    totalResponses = surveyResults.length;
+    betaInterestCount = surveyResults.filter((s) => s.betaInterest).length;
+
+    // Reset distributions with proper typing
+    roleDistribution = {};
+    cmsUsageDistribution = {};
+    usageFrequencyDistribution = {};
+    averageFeatureScores = {
+      offline: 0,
+      collaboration: 0,
+      assetManagement: 0,
+      pdfHandling: 0,
+      versionControl: 0,
+      workflows: 0,
+    };
+
+    // Calculate distributions with type safety
+    surveyResults.forEach((survey) => {
+      // Role distribution with type guard
+      const role =
+        survey.role === 'Other' && survey.otherRole ? survey.otherRole : survey.role || 'Other';
+      roleDistribution[role] = (roleDistribution[role] || 0) + 1;
+
+      // CMS usage distribution with type guard
+      const cmsUsage =
+        survey.cmsUsage === 'Other' && survey.otherCmsUsage
+          ? survey.otherCmsUsage
+          : survey.cmsUsage || 'Other';
+      cmsUsageDistribution[cmsUsage] = (cmsUsageDistribution[cmsUsage] || 0) + 1;
+
+      // Usage frequency with null check
+      if (survey.usageFrequency) {
+        usageFrequencyDistribution[survey.usageFrequency] =
+          (usageFrequencyDistribution[survey.usageFrequency] || 0) + 1;
+      }
+
+      // Feature scores with type safety
+      (Object.entries(survey.features) as [keyof Features, number][]).forEach(
+        ([feature, score]) => {
+          if (typeof score === 'number') {
+            averageFeatureScores[feature] += score;
+          }
+        }
+      );
+    });
+
+    // Calculate averages with type safety
+    (Object.keys(averageFeatureScores) as Array<keyof Features>).forEach((feature) => {
+      if (totalResponses > 0) {
+        averageFeatureScores[feature] = Number(
+          (averageFeatureScores[feature] / totalResponses).toFixed(2)
+        );
+      }
+    });
+  }
 
   async function deleteResult(id: string) {
     try {
@@ -75,11 +147,13 @@
           Authorization: `Bearer ${token}`,
         },
       });
+
       if (!response.ok) {
         throw new Error('Failed to delete result');
       }
 
       surveyResults = surveyResults.filter((result) => result.id !== id);
+      calculateMetrics(); // Recalculate metrics after deletion
     } catch (e) {
       error = 'Failed to delete result';
       console.error('Error:', e);
@@ -88,48 +162,134 @@
       deletingIds = deletingIds; // trigger reactivity
     }
   }
+
+  async function fetchResults() {
+    try {
+      loading = true;
+      error = '';
+
+      const response = await fetch(`${config.apiUrl}/results`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          auth.logout();
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      surveyResults = await response.json();
+    } catch (err: any) {
+      error = err.message || 'Failed to fetch results';
+      console.error('Error fetching results:', err);
+    } finally {
+      loading = false;
+    }
+  }
 </script>
 
 <div class="analytics-container">
   <h1>Survey Results</h1>
 
+  {#if error}
+    <div class="error">{error}</div>
+  {/if}
+
   {#if loading}
-    <p>Loading...</p>
-  {:else if error}
-    <p class="error">{error}</p>
+    <div class="loading">Loading...</div>
   {:else}
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <h3>Total Responses</h3>
+        <p class="metric-value">{totalResponses}</p>
+      </div>
+      <div class="metric-card">
+        <h3>Beta Interest</h3>
+        <p class="metric-value beta-interest">{betaInterestCount} / {totalResponses}</p>
+      </div>
+    </div>
+
+    <div class="charts-section">
+      <div class="chart-container">
+        <h3>Feature Importance</h3>
+        <div class="feature-scores">
+          {#each Object.entries(averageFeatureScores) as [feature, score]}
+            <div class="feature-score">
+              <span class="feature-name">{feature}</span>
+              <div class="score-bar" style="width: {score * 20}%">{score}</div>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Role Distribution</h3>
+        <div class="distribution-list">
+          {#each Object.entries(roleDistribution) as [role, count]}
+            <div class="distribution-item">
+              <span>{role}</span>
+              <span class="count">{count}</span>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <h3>CMS Usage</h3>
+        <div class="distribution-list">
+          {#each Object.entries(cmsUsageDistribution) as [cms, count]}
+            <div class="distribution-item">
+              <span>{cms}</span>
+              <span class="count">{count}</span>
+            </div>
+          {/each}
+        </div>
+      </div>
+    </div>
+
     <div class="results-grid">
       {#each surveyResults as result}
         <div class="result-card">
-          <h3>Response #{result.id}</h3>
-          <p><strong>Role:</strong> {result.role}</p>
-          <p><strong>CMS Usage:</strong> {result.cmsUsage}</p>
-          <h4>Feature Ratings:</h4>
-          <ul>
-            <li>Offline: {result.features.offline}/5</li>
-            <li>Collaboration: {result.features.collaboration}/5</li>
-            <li>Asset Management: {result.features.assetManagement}/5</li>
-            <li>PDF Handling: {result.features.pdfHandling}/5</li>
-            <li>Version Control: {result.features.versionControl}/5</li>
-            <li>Workflows: {result.features.workflows}/5</li>
-          </ul>
-          {#if result.betaInterest}
-            <p class="beta-interest">Interested in Beta Program</p>
-          {/if}
-          {#if result.email}
-            <p><strong>Email:</strong> {result.email}</p>
-          {/if}
-          <button on:click={() => deleteResult(result.id)} disabled={deletingIds.has(result.id)}>
+          <button
+            class="delete-button"
+            on:click={() => deleteResult(result.id)}
+            disabled={deletingIds.has(result.id)}
+          >
             {#if deletingIds.has(result.id)}
               Deleting...
             {:else}
               Delete
             {/if}
           </button>
+          <h3>Response {result.id}</h3>
+          <ul>
+            <li><strong>Role:</strong> {result.role}</li>
+            <li><strong>CMS Usage:</strong> {result.cmsUsage}</li>
+            <li><strong>Usage Frequency:</strong> {result.usageFrequency}</li>
+            <li><strong>Primary Purpose:</strong> {result.primaryPurpose}</li>
+            <li><strong>Beta Interest:</strong> {result.betaInterest ? 'Yes' : 'No'}</li>
+            {#if result.email}
+              <li><strong>Email:</strong> {result.email}</li>
+            {/if}
+            <li>
+              <strong>Feature Ratings:</strong>
+              <ul class="feature-list">
+                {#each Object.entries(result.features) as [feature, rating]}
+                  <li>{feature}: {rating}/5</li>
+                {/each}
+              </ul>
+            </li>
+          </ul>
         </div>
       {/each}
     </div>
   {/if}
+  <AnalyticsDashboard {surveyResults} />
 </div>
 
 <style>
@@ -139,23 +299,119 @@
     margin: 0 auto;
   }
 
-  .results-grid {
+  .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
-    margin-top: 2rem;
+    margin-bottom: 2rem;
   }
 
-  .result-card {
+  .metric-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #059669;
+  }
+
+  .charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .chart-container {
     background: white;
     padding: 1.5rem;
     border-radius: 0.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .beta-interest {
-    color: #047857;
-    font-weight: 500;
+  .feature-scores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .feature-score {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .feature-name {
+    min-width: 120px;
+  }
+
+  .score-bar {
+    background: #059669;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    min-width: 2rem;
+    text-align: right;
+  }
+
+  .distribution-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .distribution-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: #f3f4f6;
+    border-radius: 0.25rem;
+  }
+
+  .count {
+    font-weight: 600;
+    color: #059669;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .result-card {
+    position: relative;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .delete-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+  }
+
+  .delete-button:disabled {
+    background: #f87171;
+    cursor: not-allowed;
+  }
+
+  .feature-list {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
   }
 
   .error {
@@ -163,11 +419,23 @@
     padding: 1rem;
     background-color: #fee2e2;
     border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
   }
 
   h1 {
     color: #111827;
     margin-bottom: 2rem;
+  }
+
+  h3 {
+    color: #374151;
+    margin-bottom: 1rem;
   }
 
   ul {
@@ -179,8 +447,7 @@
     margin-bottom: 0.5rem;
   }
 
-  button:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+  strong {
+    color: #374151;
   }
 </style>
