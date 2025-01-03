@@ -1,27 +1,19 @@
 <script lang="ts">
-  import { Clock, Users, Cloud, Code, ArrowRight, CheckCircle } from 'lucide-svelte';
-  import type { FormField, SurveyResponse } from '../types/Survey';
-  import type { ComponentType } from 'svelte';
+  import { CheckCircle, Laptop, Users, Folder, Code } from 'lucide-svelte';
+  import type { FormField, SurveyResponse, Feature } from '../types/Survey';
   import LocalHavenLogo from '../assets/LocalHavenCMS.webp';
   import SurveyForm from './SurveyForm.svelte';
   import { config } from '../config';
 
-  export let formFields: FormField[];
-
-  let currentStep = 0;
-  let isSubmitting = false;
+  export let formFields: FormField[] = [];
+  export let isSubmitting = false;
+  export let currentStep = 0;
   let errorMessage = '';
   let formData: Partial<SurveyResponse> = {};
 
-  interface Feature {
-    icon: ComponentType;
-    title: string;
-    description: string;
-  }
-
   const features: Feature[] = [
     {
-      icon: Clock,
+      icon: Laptop,
       title: 'Work Anywhere',
       description: 'True offline-first architecture ensures uninterrupted work',
     },
@@ -31,7 +23,7 @@
       description: 'Seamless team coordination across devices',
     },
     {
-      icon: Cloud,
+      icon: Folder,
       title: 'Asset Management',
       description: 'Efficient handling of all your digital content',
     },
@@ -87,26 +79,13 @@
       <h1 class="visually-hidden">LocalHaven CMS</h1>
     </header>
 
-    <div class="hero">
-      <div class="hero-content">
-        <h2 class="hero-title">Your Content. Your Control.</h2>
-        <p class="hero-description">
-          Experience the freedom of local-first content management. Collaborate, create, and manage
-          your digital assets with ease—even offline.
-        </p>
-        <button class="button button-primary" on:click={scrollToSurvey}> Get Started </button>
-      </div>
-    </div>
-
     <div class="container">
       <div class="features-grid">
         {#each features as feature}
           <div class="feature-card">
-            <div class="feature-icon">
-              <svelte:component this={feature.icon} size={48} />
-            </div>
-            <h3 class="feature-title">{feature.title}</h3>
-            <p class="feature-description">{feature.description}</p>
+            <svelte:component this={feature.icon} size={32} class="feature-icon" />
+            <h3>{feature.title}</h3>
+            <p>{feature.description}</p>
           </div>
         {/each}
       </div>
@@ -127,30 +106,6 @@
             </div>
 
             <SurveyForm {formFields} bind:currentStep {isSubmitting} onSubmit={handleSubmit} />
-
-            <!-- <div class="nav-buttons">
-              {#if currentStep > 0}
-                <button
-                  class="button-secondary"
-                  on:click={() => currentStep--}
-                  disabled={isSubmitting}
-                >
-                  Back
-                </button>
-              {/if}
-              <button
-                class="button-primary"
-                on:click={() => (currentStep < 4 ? currentStep++ : null)}
-                disabled={isSubmitting}
-              >
-                {#if isSubmitting}
-                  Submitting...
-                {:else}
-                  {currentStep === 4 ? 'Submit' : 'Next'}
-                  <svelte:component this={ArrowRight} size={16} class="icon-right" />
-                {/if}
-              </button>
-            </div> -->
 
             {#if errorMessage}
               <div class="error-message">{errorMessage}</div>
@@ -175,6 +130,17 @@
   </footer>
 </section>
 
+<!-- Main Landing Page Layout -->
+<section class="landing-page">
+  <!-- Existing content / survey embed -->
+  <!-- The SurveyForm or whichever component you display next -->
+  <!-- Example: <SurveyForm ... /> or other content -->
+
+  {#if errorMessage}
+    <div class="error">{errorMessage}</div>
+  {/if}
+</section>
+
 <style>
   .min-h-screen {
     min-height: 100vh;
@@ -191,46 +157,6 @@
   .logo {
     height: 8rem;
     margin-right: 1rem;
-  }
-
-  .hero {
-    background: linear-gradient(180deg, #065f46 0%, #047857 100%);
-    color: white;
-    padding: 4rem 1rem;
-  }
-
-  .hero-content {
-    max-width: 48rem;
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  .hero-title {
-    font-size: 2.25rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-  }
-
-  .hero-description {
-    font-size: 1.25rem;
-    margin-bottom: 2rem;
-  }
-
-  .button {
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .button-primary {
-    background-color: white;
-    color: #047857;
-    border: none;
-  }
-
-  .button-primary:hover {
-    background-color: #f9fafb;
   }
 
   .success-message {
@@ -250,6 +176,10 @@
 
   .beta-text {
     margin-top: 1rem;
+    color: #047857;
+  }
+
+  svg > path {
     color: #047857;
   }
 
@@ -282,13 +212,14 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     padding: 1.5rem;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .feature-icon {
-    display: flex;
-    justify-content: center;
     margin-bottom: 1rem;
-    color: #059669; /* green-600 */
+    color: #047857; /* green-600 */
   }
 
   .feature-title {
@@ -364,5 +295,69 @@
   button:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+  }
+
+  .landing-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  .value-prop {
+    background: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .value-prop h1 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    color: #111827;
+  }
+  .value-prop p {
+    line-height: 1.6;
+    color: #374151;
+  }
+  .error {
+    color: #b91c1c;
+    margin-top: 1rem;
+  }
+
+  .hero {
+    padding: 4rem 2rem;
+    text-align: center;
+    background: linear-gradient(180deg, #047857 0%, #065f46 100%);
+    color: white;
+  }
+
+  .lead {
+    font-size: 1.5rem;
+    max-width: 36rem;
+    margin: 1rem auto 3rem;
+    opacity: 0.9;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .feature-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    transition: transform 0.2s;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
   }
 </style>

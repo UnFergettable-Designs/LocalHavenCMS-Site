@@ -21,33 +21,38 @@ import (
 )
 
 type SurveyResponse struct {
-	ID                     string    `json:"id"`
-	Role                   string    `json:"role"`
-	OtherRole              string    `json:"otherRole,omitempty"`
-	CmsUsage               string    `json:"cmsUsage"`
-	OtherCmsUsage          string    `json:"otherCmsUsage,omitempty"`
-	Features               Features  `json:"features"`
-	BetaInterest           bool      `json:"betaInterest"`
-	Email                  string    `json:"email,omitempty"`
-	CreatedAt              time.Time `json:"createdAt"`
-	BiggestFrustrations    string    `json:"biggestFrustrations"`
-	SpecificProblems       string    `json:"specificProblems"`
-	UsageFrequency         string    `json:"usageFrequency"`
-	PrimaryPurpose         string    `json:"primaryPurpose"`
-	Platforms              string    `json:"platforms"`
-	CmsPreference          string    `json:"cmsPreference"`
-	WishedFeatures         string    `json:"wishedFeatures"`
-	WorkflowImportance     string    `json:"workflowImportance"`
-	TeamSize               string    `json:"teamSize"`
-	CollaborationFrequency string    `json:"collaborationFrequency"`
-	PricingSensitivity     string    `json:"pricingSensitivity"`
-	PricingModel           string    `json:"pricingModel"`
-	Integrations           string    `json:"integrations"`
-	IntegrationImportance  string    `json:"integrationImportance"`
-	ContentTypes           string    `json:"contentTypes"`
-	CustomFormats          string    `json:"customFormats"`
-	FeedbackSuggestions    string    `json:"feedbackSuggestions"`
-	ExcitementFactors      string    `json:"excitementFactors"`
+	ID                            string    `json:"id"`
+	Role                          string    `json:"role"`
+	OtherRole                     string    `json:"otherRole,omitempty"`
+	CmsUsage                      string    `json:"cmsUsage"`
+	OtherCmsUsage                 string    `json:"otherCmsUsage,omitempty"`
+	Features                      Features  `json:"features"`
+	BetaInterest                  bool      `json:"betaInterest"`
+	Email                         string    `json:"email,omitempty"`
+	CreatedAt                     time.Time `json:"createdAt"`
+	BiggestFrustrations           string    `json:"biggestFrustrations"`
+	SpecificProblems              string    `json:"specificProblems"`
+	UsageFrequency                string    `json:"usageFrequency"`
+	PrimaryPurpose                string    `json:"primaryPurpose"`
+	Platforms                     string    `json:"platforms"`
+	CmsPreference                 string    `json:"cmsPreference"`
+	WishedFeatures                string    `json:"wishedFeatures"`
+	WorkflowImportance            string    `json:"workflowImportance"`
+	TeamSize                      string    `json:"teamSize"`
+	CollaborationFrequency        string    `json:"collaborationFrequency"`
+	PricingSensitivity            string    `json:"pricingSensitivity"`
+	PricingModel                  string    `json:"pricingModel"`
+	Integrations                  string    `json:"integrations"`
+	IntegrationImportance         string    `json:"integrationImportance"`
+	ContentTypes                  string    `json:"contentTypes"`
+	CustomFormats                 string    `json:"customFormats"`
+	FeedbackSuggestions           string    `json:"feedbackSuggestions"`
+	ExcitementFactors             string    `json:"excitementFactors"`
+	CollaborationChallenges       string    `json:"collaborationChallenges"`
+	OfflineWorkFrequency          string    `json:"offlineWorkFrequency"`
+	OfflineWorkarounds            string    `json:"offlineWorkarounds"`
+	CurrentChangeConflictHandling string    `json:"currentChangeConflictHandling"`
+	VersionControlChallenges      string    `json:"versionControlChallenges"`
 }
 
 type Features struct {
@@ -156,7 +161,12 @@ func createInitialTable() error {
 		content_types TEXT,
 		custom_formats TEXT,
 		feedback_suggestions TEXT,
-		excitement_factors TEXT
+		excitement_factors TEXT,
+		collaboration_challenges TEXT,
+		offline_work_frequency TEXT,
+		offline_workarounds TEXT,
+		current_change_conflict_handling TEXT,
+		version_control_challenges TEXT
 	)`)
 	return err
 }
@@ -196,7 +206,12 @@ func migrateTable() error {
         content_types TEXT,
         custom_formats TEXT,
         feedback_suggestions TEXT,
-        excitement_factors TEXT
+        excitement_factors TEXT,
+        collaboration_challenges TEXT,
+        offline_work_frequency TEXT,
+        offline_workarounds TEXT,
+        current_change_conflict_handling TEXT,
+        version_control_challenges TEXT
     )`)
 	if err != nil {
 		return err
@@ -322,7 +337,9 @@ func submitSurvey(c *gin.Context) {
 			pricing_sensitivity, pricing_model,
 			integrations, integration_importance,
 			content_types, custom_formats,
-			feedback_suggestions, excitement_factors
+			feedback_suggestions, excitement_factors,
+			collaboration_challenges, offline_work_frequency, offline_workarounds,
+			current_change_conflict_handling, version_control_challenges
 		) VALUES (
 			?, ?, ?, ?, ?, ?,
 			?, ?, ?,
@@ -335,7 +352,7 @@ func submitSurvey(c *gin.Context) {
 			?, ?,
 			?, ?,
 			?, ?,
-			?, ?
+			 ?, ?, ?, ?
 		)
 	`)
 	if err != nil {
@@ -360,6 +377,11 @@ func submitSurvey(c *gin.Context) {
 		survey.Integrations, survey.IntegrationImportance,
 		survey.ContentTypes, survey.CustomFormats,
 		survey.FeedbackSuggestions, survey.ExcitementFactors,
+		survey.CollaborationChallenges,
+		survey.OfflineWorkFrequency,
+		survey.OfflineWorkarounds,
+		survey.CurrentChangeConflictHandling,
+		survey.VersionControlChallenges,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -387,6 +409,8 @@ func getSurveyResults(c *gin.Context) {
 		wished_features, workflow_importance, team_size, collaboration_frequency,
 		pricing_sensitivity, pricing_model, integrations, integration_importance,
 		content_types, custom_formats, feedback_suggestions, excitement_factors,
+		collaboration_challenges, offline_work_frequency, offline_workarounds,
+		current_change_conflict_handling, version_control_challenges,
 		created_at 
 		FROM survey_responses`)
 	if err != nil {
@@ -409,7 +433,9 @@ func getSurveyResults(c *gin.Context) {
 			&response.WorkflowImportance, &response.TeamSize, &response.CollaborationFrequency,
 			&response.PricingSensitivity, &response.PricingModel, &response.Integrations,
 			&response.IntegrationImportance, &response.ContentTypes, &response.CustomFormats,
-			&response.FeedbackSuggestions, &response.ExcitementFactors, &response.CreatedAt)
+			&response.FeedbackSuggestions, &response.ExcitementFactors, &response.CollaborationChallenges,
+			&response.OfflineWorkFrequency, &response.OfflineWorkarounds, &response.CurrentChangeConflictHandling,
+			&response.VersionControlChallenges, &response.CreatedAt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -4,31 +4,39 @@ import LandingPage from '../components/LandingPage.svelte';
 import type { FormField } from '../types/Survey';
 
 const formFields: FormField[] = [
-  { 
+  {
     id: 'role',
-    label: 'What is your role?',
+    label: 'What is your role? (If other, please specify in the text box)',
     type: 'select',
     name: 'role',
     required: true,
-    options: ['Developer', 'Content Editor', 'Manager', 'Designer', 'Other']
+    options: [
+      'Developer',
+      'Content Editor',
+      'Manager',
+      'Designer',
+      'Other (please specify)'
+    ]
   },
-  { 
+  {
     id: 'otherRole',
-    label: 'Please specify your role',
+    label: 'Please specify your role (if you selected "Other")',
     type: 'text',
     name: 'otherRole',
     dependsOn: 'role',
-    dependsOnValue: 'Other'
+    dependsOnValue: 'Other (please specify)'
   },
-  { 
+
+  // Current Usage
+  {
     id: 'cmsUsage',
     label: 'Which CMS do you currently use?',
     type: 'select',
     name: 'cmsUsage',
     required: true,
-    options: ['WordPress', 'Drupal', 'Custom Solution', 'None', 'Other']
+    options: ['WordPress', 'Drupal', 'Shopify', 'Custom-built', 'None', 'Other']
   },
-  { 
+  {
     id: 'otherCmsUsage',
     label: 'If other CMS, please specify',
     type: 'text',
@@ -36,7 +44,7 @@ const formFields: FormField[] = [
     dependsOn: 'cmsUsage',
     dependsOnValue: 'Other'
   },
-  { 
+  {
     id: 'usageFrequency',
     label: 'How often do you use your CMS?',
     type: 'select',
@@ -44,133 +52,59 @@ const formFields: FormField[] = [
     required: true,
     options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
   },
-  { 
+
+  // Primary Purpose & Platforms
+  {
     id: 'primaryPurpose',
-    label: 'Primary purpose for using a CMS',
+    label: 'What is your primary purpose for using a CMS? (e.g., blog publishing, e-commerce, project docs)',
     type: 'text',
     name: 'primaryPurpose',
     required: true
   },
-  { 
+  {
     id: 'platforms',
-    label: 'Which platforms do you typically work with?',
+    label: 'Which platforms do you use most with your CMS? (e.g., WordPress, Shopify, custom-built)',
     type: 'text',
     name: 'platforms',
     required: true
   },
-  { 
+
+  // Frustrations & Desired Features
+  {
+    id: 'biggestFrustrations',
+    label: 'What are your biggest frustrations with your current CMS?',
+    type: 'textarea',
+    name: 'biggestFrustrations'
+  },
+  {
+    id: 'specificProblems',
+    label: 'What specific problems do you want solved?',
+    type: 'textarea',
+    name: 'specificProblems'
+  },
+  {
+    id: 'wishedFeatures',
+    label: 'Which features do you wish you had? (e.g., advanced workflows, offline access)',
+    type: 'textarea',
+    name: 'wishedFeatures'
+  },
+  {
     id: 'cmsPreference',
     label: 'What do you look for in a CMS?',
     type: 'textarea',
     name: 'cmsPreference'
   },
-  { 
-    id: 'biggestFrustrations',
-    label: 'Biggest frustrations with current CMS',
-    type: 'textarea',
-    name: 'biggestFrustrations'
-  },
-  { 
-    id: 'specificProblems',
-    label: 'Specific problems you want solved',
-    type: 'textarea',
-    name: 'specificProblems'
-  },
-  { 
-    id: 'wishedFeatures',
-    label: 'Features you wish you had',
-    type: 'textarea',
-    name: 'wishedFeatures'
-  },
-  { 
-    id: 'teamSize',
-    label: 'What is your team size?',
-    type: 'select',
-    name: 'teamSize',
-    required: true,
-    options: ['Solo', '2-5', '6-10', '11-20', '20+']
-  },
-  { 
-    id: 'collaborationFrequency',
-    label: 'How often do you collaborate?',
-    type: 'select',
-    name: 'collaborationFrequency',
-    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
-  },
-  { 
-    id: 'pricingSensitivity',
-    label: 'Expected pricing range',
-    type: 'select',
-    name: 'pricingSensitivity',
-    options: ['Free', '$1-50/mo', '$51-200/mo', '$201-500/mo', '$500+/mo']
-  },
-  { 
-    id: 'pricingModel',
-    label: 'Preferred pricing model',
-    type: 'select',
-    name: 'pricingModel',
-    options: ['Subscription', 'One-time purchase', 'Free/Open Source', 'Other']
-  },
-  { 
-    id: 'integrations',
-    label: 'Required integrations',
-    type: 'textarea',
-    name: 'integrations'
-  },
-  { 
-    id: 'integrationImportance',
-    label: 'How important are integrations?',
-    type: 'select',
-    name: 'integrationImportance',
-    options: ['Critical', 'Important', 'Nice to have', 'Not important']
-  },
-  { 
-    id: 'contentTypes',
-    label: 'Content types you work with',
-    type: 'textarea',
-    name: 'contentTypes'
-  },
-  { 
-    id: 'customFormats',
-    label: 'Custom format requirements',
-    type: 'textarea',
-    name: 'customFormats'
-  },
-  { 
-    id: 'feedbackSuggestions',
-    label: 'Additional feedback',
-    type: 'textarea',
-    name: 'feedbackSuggestions'
-  },
-  { 
-    id: 'excitementFactors',
-    label: 'What excites you about a new CMS?',
-    type: 'textarea',
-    name: 'excitementFactors'
-  },
-    { 
-    id: 'betaInterest',
-    label: 'Would you like to participate in beta testing?',
-    type: 'checkbox',
-    name: 'betaInterest'
-  },
-  { 
-    id: 'email',
-    label: 'Email address for beta testing',
-    type: 'email',
-    name: 'email',
-    dependsOn: 'betaInterest',
-    dependsOnValue: true
-  },
-  { 
+
+  // Feature Importance Ratings
+  {
     id: 'features.offline',
-    label: 'Rate the importance of offline capability',
+    label: 'Rate the importance of offline capability (1-5)',
     type: 'radio',
     name: 'features.offline',
     required: true,
     options: ['1', '2', '3', '4', '5']
   },
-  { 
+  {
     id: 'features.collaboration',
     label: 'How important is real-time collaboration? (1-5)',
     type: 'radio',
@@ -178,7 +112,7 @@ const formFields: FormField[] = [
     required: true,
     options: ['1', '2', '3', '4', '5']
   },
-  { 
+  {
     id: 'features.assetManagement',
     label: 'How important is asset management? (1-5)',
     type: 'radio',
@@ -186,7 +120,7 @@ const formFields: FormField[] = [
     required: true,
     options: ['1', '2', '3', '4', '5']
   },
-  { 
+  {
     id: 'features.pdfHandling',
     label: 'How important is PDF handling? (1-5)',
     type: 'radio',
@@ -194,7 +128,7 @@ const formFields: FormField[] = [
     required: true,
     options: ['1', '2', '3', '4', '5']
   },
-  { 
+  {
     id: 'features.versionControl',
     label: 'How important is version control? (1-5)',
     type: 'radio',
@@ -202,17 +136,114 @@ const formFields: FormField[] = [
     required: true,
     options: ['1', '2', '3', '4', '5']
   },
-  { 
+  {
     id: 'features.workflows',
     label: 'How important are customizable workflows? (1-5)',
     type: 'radio',
     name: 'features.workflows',
     required: true,
     options: ['1', '2', '3', '4', '5']
-  }
+  },
+
+  // Collaboration & Team Size
+  {
+    id: 'teamSize',
+    label: 'What is your team size?',
+    type: 'select',
+    name: 'teamSize',
+    required: true,
+    options: ['Solo', '2-5', '6-10', '11-20', '20+']
+  },
+  {
+    id: 'collaborationFrequency',
+    label: 'How often do you collaborate? (e.g., real-time editing, approvals, shared workspaces)',
+    type: 'select',
+    name: 'collaborationFrequency',
+    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
+  },
+  {
+    id: 'collaborationChallenges',
+    label: 'What challenges do you face when multiple team members need to edit content simultaneously?',
+    type: 'textarea',
+    name: 'collaborationChallenges'
+  },
+  {
+    id: 'offlineWorkFrequency',
+    label: 'How often do you need to work on content without reliable internet access?',
+    type: 'select',
+    name: 'offlineWorkFrequency',
+    options: ['Always', 'Frequently', 'Sometimes', 'Rarely', 'Never']
+  },
+  {
+    id: 'offlineWorkarounds',
+    label: 'What workarounds do you currently use when working offline?',
+    type: 'textarea',
+    name: 'offlineWorkarounds'
+  },
+  {
+    id: 'currentChangeConflictHandling',
+    label: 'How do you currently handle conflicts when multiple team members make changes?',
+    type: 'textarea',
+    name: 'currentChangeConflictHandling'
+  },
+  {
+    id: 'versionControlChallenges',
+    label: 'What challenges do you face in tracking content changes across your team?',
+    type: 'textarea',
+    name: 'versionControlChallenges'
+  },
+
+  // Pricing
+  {
+    id: 'pricingSensitivity',
+    label: 'Which pricing range best fits your budget?',
+    type: 'select',
+    name: 'pricingSensitivity',
+    options: ['Free', '$1-50/mo', '$51-200/mo', '$201-500/mo', '$500+/mo']
+  },
+  {
+    id: 'pricingModel',
+    label: 'Preferred pricing model (optional: please explain if needed)',
+    type: 'select',
+    name: 'pricingModel',
+    options: ['Subscription', 'One-time purchase', 'Free/Open Source', 'Other']
+  },
+
+  // Content Types & Custom Formats
+  {
+    id: 'contentTypes',
+    label: 'What types of content do you work with?',
+    type: 'textarea',
+    name: 'contentTypes'
+  },
+  {
+    id: 'customFormats',
+    label: 'Any specific custom formats you need to support? (e.g., videos, proprietary docs)',
+    type: 'textarea',
+    name: 'customFormats'
+  },
+
+  // Beta Testing
+  {
+    id: 'betaInterest',
+    label: 'Would you like to participate in beta testing? (Your email will be kept private)',
+    type: 'checkbox',
+    name: 'betaInterest'
+  },
+  {
+    id: 'email',
+    label: 'Email address for beta testing (optional if you opted in)',
+    type: 'email',
+    name: 'email',
+    dependsOn: 'betaInterest',
+    dependsOnValue: true
+  },
 ];
 ---
 
 <Layout title="LocalHaven CMS">
-  <LandingPage client:load {formFields} />
+  <LandingPage 
+    client:load 
+    {formFields}
+  />
 </Layout>

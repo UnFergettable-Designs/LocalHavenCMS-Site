@@ -1,3 +1,5 @@
+  import type { ComponentType } from 'svelte';
+
 export interface Features {
   offline: number | undefined;
   collaboration: number | undefined;
@@ -35,6 +37,11 @@ export interface SurveyResponse {
   customFormats: string;
   feedbackSuggestions?: string;
   excitementFactors?: string;
+  collaborationChallenges?: string;
+  offlineWorkFrequency?: string;
+  offlineWorkarounds?: string;
+  currentChangeConflictHandling?: string;
+  versionControlChallenges?: string;
 }
 
 export interface FormField {
@@ -92,4 +99,10 @@ export interface DashboardMetrics {
     teamSizes: Record<string, number>;
     pricing: Record<string, number>;
   };
+}
+
+export interface Feature {
+  icon: ComponentType;
+  title: string;
+  description: string;
 }
