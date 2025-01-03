@@ -5,6 +5,10 @@
   import type { SurveyResponse, MetricsData, Features } from '../types/Survey';
   import AnalyticsDashboard from './AnalyticsDashboard.svelte';
 
+  // Strongly type the distributions
+  type Distribution = Record<string, number>;
+  type FeatureScores = Record<keyof Features, number>;
+
   let surveyResults: SurveyResponse[] = [];
   let loading = true;
   let error = '';
@@ -12,7 +16,7 @@
 
   // Add new metrics
   let totalResponses = 0;
-  let averageFeatureScores: Record<keyof Features, number> = {
+  let averageFeatureScores: FeatureScores = {
     offline: 0,
     collaboration: 0,
     assetManagement: 0,
@@ -20,9 +24,9 @@
     versionControl: 0,
     workflows: 0,
   };
-  let roleDistribution: Record<string, number> = {};
-  let cmsUsageDistribution: Record<string, number> = {};
-  let usageFrequencyDistribution: Record<string, number> = {};
+  let roleDistribution: Distribution = {};
+  let cmsUsageDistribution: Distribution = {};
+  let usageFrequencyDistribution: Distribution = {};
   let betaInterestCount = 0;
   let metrics: MetricsData | null = null;
 
@@ -74,11 +78,11 @@
     }
   });
 
-  function calculateMetrics() {
+  function calculateMetrics(): void {
     totalResponses = surveyResults.length;
     betaInterestCount = surveyResults.filter((s) => s.betaInterest).length;
 
-    // Reset distributions
+    // Reset distributions with proper typing
     roleDistribution = {};
     cmsUsageDistribution = {};
     usageFrequencyDistribution = {};
@@ -91,32 +95,43 @@
       workflows: 0,
     };
 
-    // Calculate distributions and averages
+    // Calculate distributions with type safety
     surveyResults.forEach((survey) => {
-      // Role distribution
-      const role = survey.role === 'Other' ? survey.otherRole || 'Other' : survey.role;
+      // Role distribution with type guard
+      const role =
+        survey.role === 'Other' && survey.otherRole ? survey.otherRole : survey.role || 'Other';
       roleDistribution[role] = (roleDistribution[role] || 0) + 1;
 
-      // CMS usage distribution
+      // CMS usage distribution with type guard
       const cmsUsage =
-        survey.cmsUsage === 'Other' ? survey.otherCmsUsage || 'Other' : survey.cmsUsage;
+        survey.cmsUsage === 'Other' && survey.otherCmsUsage
+          ? survey.otherCmsUsage
+          : survey.cmsUsage || 'Other';
       cmsUsageDistribution[cmsUsage] = (cmsUsageDistribution[cmsUsage] || 0) + 1;
 
-      // Usage frequency distribution
-      usageFrequencyDistribution[survey.usageFrequency] =
-        (usageFrequencyDistribution[survey.usageFrequency] || 0) + 1;
+      // Usage frequency with null check
+      if (survey.usageFrequency) {
+        usageFrequencyDistribution[survey.usageFrequency] =
+          (usageFrequencyDistribution[survey.usageFrequency] || 0) + 1;
+      }
 
-      // Feature scores
-      Object.entries(survey.features).forEach(([feature, score]) => {
-        averageFeatureScores[feature] += score;
-      });
+      // Feature scores with type safety
+      (Object.entries(survey.features) as [keyof Features, number][]).forEach(
+        ([feature, score]) => {
+          if (typeof score === 'number') {
+            averageFeatureScores[feature] += score;
+          }
+        }
+      );
     });
 
-    // Calculate averages for feature scores
-    Object.keys(averageFeatureScores).forEach((feature) => {
-      averageFeatureScores[feature] = Number(
-        (averageFeatureScores[feature] / totalResponses).toFixed(2)
-      );
+    // Calculate averages with type safety
+    (Object.keys(averageFeatureScores) as Array<keyof Features>).forEach((feature) => {
+      if (totalResponses > 0) {
+        averageFeatureScores[feature] = Number(
+          (averageFeatureScores[feature] / totalResponses).toFixed(2)
+        );
+      }
     });
   }
 

@@ -77,7 +77,7 @@
       {
         label: 'Feature Scores',
         data: [],
-        backgroundColor: '#059669',
+        backgroundColor: 'var(--color-chart-1)',
       },
     ],
   };
@@ -87,7 +87,13 @@
     datasets: [
       {
         data: [],
-        backgroundColor: ['#059669', '#0891b2', '#6366f1', '#8b5cf6', '#ec4899'],
+        backgroundColor: [
+          'var(--color-chart-1)',
+          'var(--color-chart-2)',
+          'var(--color-chart-3)',
+          'var(--color-chart-4)',
+          'var(--color-chart-5)',
+        ],
       },
     ],
   };
@@ -136,11 +142,13 @@
     metrics.totalResponses = surveyResults.length;
     metrics.betaInterestCount = surveyResults.filter((s) => s.betaInterest).length;
 
-    for (const feature of Object.keys(metrics.featureScores) as Array<keyof Features>) {
-      metrics.featureScores[feature] =
-        surveyResults.reduce((sum, response) => sum + (response.features[feature] || 0), 0) /
+    // Calculate feature scores with type safety
+    Object.keys(metrics.featureScores).forEach((feature) => {
+      const typedFeature = feature as keyof Features;
+      metrics.featureScores[typedFeature] =
+        surveyResults.reduce((sum, response) => sum + (response.features[typedFeature] || 0), 0) /
         metrics.totalResponses;
-    }
+    });
 
     metrics.distributions = {
       roles: calculateFrequencyDistribution(surveyResults.map((r) => r.role)),
@@ -232,14 +240,14 @@
   }
 
   .chart-container {
-    background: white;
+    background: var(--color-background);
     padding: 1.5rem;
     border-radius: 0.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   h3 {
-    color: #374151;
+    color: var(--color-text-secondary);
     margin-bottom: 1rem;
     text-align: center;
   }
@@ -257,7 +265,7 @@
   }
 
   .metric-card {
-    background: white;
+    background: var(--color-background);
     padding: 1.5rem;
     border-radius: 0.5rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -267,6 +275,6 @@
   .metric-value {
     font-size: 2rem;
     font-weight: 600;
-    color: #059669;
+    color: var(--color-primary);
   }
 </style>

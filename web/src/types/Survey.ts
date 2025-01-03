@@ -1,12 +1,12 @@
-  import type { ComponentType } from 'svelte';
+import type { Component } from 'svelte';
 
 export interface Features {
-  offline: number | undefined;
-  collaboration: number | undefined;
-  assetManagement: number | undefined;
-  pdfHandling: number | undefined;
-  versionControl: number | undefined;
-  workflows: number | undefined;
+  offline?: number;
+  collaboration?: number;
+  assetManagement?: number;
+  pdfHandling?: number;
+  versionControl?: number;
+  workflows?: number;
 }
 
 export interface SurveyResponse {
@@ -102,7 +102,50 @@ export interface DashboardMetrics {
 }
 
 export interface Feature {
-  icon: ComponentType;
+  icon: Component;
   title: string;
   description: string;
+}
+
+export type FieldValue = string | number | boolean | undefined;
+
+export interface SurveyFormData {
+  [key: string]: FieldValue | Features | Record<string, any>;
+  features: {
+    offline: number;
+    collaboration: number;
+    assetManagement: number;
+    pdfHandling: number;
+    versionControl: number;
+    workflows: number;
+  };
+  role: string;
+  otherRole?: string;
+  cmsUsage: string;
+  otherCmsUsage?: string;
+  betaInterest: boolean;
+  email?: string;
+  biggestFrustrations: string;
+  specificProblems: string;
+  usageFrequency: string;
+  primaryPurpose: string;
+  platforms: string;
+  cmsPreference: string;
+  wishedFeatures: string;
+  workflowImportance: string;
+  teamSize: string;
+  collaborationFrequency: string;
+  pricingSensitivity: string;
+  pricingModel: string;
+  integrations: string;
+  integrationImportance: string;
+  contentTypes: string;
+  customFormats: string;
+  feedbackSuggestions?: string;
+  excitementFactors?: string;
+  collaborationChallenges?: string;
+  offlineWorkFrequency?: string;
+  offlineWorkarounds?: string;
+  currentChangeConflictHandling?: string;
+  versionControlChallenges?: string;
 }

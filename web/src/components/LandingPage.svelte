@@ -72,14 +72,24 @@
   }
 </script>
 
-<section>
+<section class="landing-page">
   <div class="min-h-screen">
     <header class="header">
       <img src={LocalHavenLogo.src} alt="LocalHaven CMS Logo" class="logo" />
       <h1 class="visually-hidden">LocalHaven CMS</h1>
     </header>
 
-    <div class="container">
+    <section class="container">
+      <div class="hero">
+        <h1>LocalHaven CMS</h1>
+        <p class="lead">
+          LocalHaven is a headless CMS that lets your team create and manage content from anywhere,
+          online or off, with real-time collaboration that just works. Built for developers with a
+          modern tech stack and robust APIs, it gives you complete control over how your content
+          flows to any platform or device.
+        </p>
+        <button class="cta-button primary" on:click={scrollToSurvey}>Take the Survey</button>
+      </div>
       <div class="features-grid">
         {#each features as feature}
           <div class="feature-card">
@@ -89,7 +99,7 @@
           </div>
         {/each}
       </div>
-    </div>
+    </section>
 
     <div id="survey" class="container">
       <div class="survey-section">
@@ -130,17 +140,6 @@
   </footer>
 </section>
 
-<!-- Main Landing Page Layout -->
-<section class="landing-page">
-  <!-- Existing content / survey embed -->
-  <!-- The SurveyForm or whichever component you display next -->
-  <!-- Example: <SurveyForm ... /> or other content -->
-
-  {#if errorMessage}
-    <div class="error">{errorMessage}</div>
-  {/if}
-</section>
-
 <style>
   .min-h-screen {
     min-height: 100vh;
@@ -150,8 +149,8 @@
     display: flex;
     align-items: center;
     padding: 1rem;
-    background-color: #111827;
-    color: white;
+    background-color: var(--color-background-dark);
+    color: var(--color-background);
   }
 
   .logo {
@@ -171,16 +170,12 @@
   }
 
   .success-text {
-    color: #6b7280;
+    color: var(--color-text-light);
   }
 
   .beta-text {
     margin-top: 1rem;
-    color: #047857;
-  }
-
-  svg > path {
-    color: #047857;
+    color: var(--color-primary);
   }
 
   .container {
@@ -207,7 +202,7 @@
   }
 
   .feature-card {
-    background-color: white;
+    background-color: var(--color-background);
     border-radius: 0.5rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     padding: 1.5rem;
@@ -219,7 +214,7 @@
 
   .feature-icon {
     margin-bottom: 1rem;
-    color: #047857; /* green-600 */
+    color: var(--color-primary);
   }
 
   .feature-title {
@@ -229,13 +224,13 @@
   }
 
   .feature-description {
-    color: #4b5563; /* gray-600 */
+    color: var(--color-text-tertiary);
   }
 
   .survey-section {
     max-width: 42rem;
     margin: 0 auto;
-    background-color: white;
+    background-color: var(--color-background);
     border-radius: 0.5rem;
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
   }
@@ -265,11 +260,11 @@
   }
 
   .step-active {
-    background-color: #059669; /* green-600 */
+    background-color: var(--color-success);
   }
 
   .step-inactive {
-    background-color: #e5e7eb; /* gray-200 */
+    background-color: var(--color-border);
   }
 
   .visually-hidden {
@@ -285,11 +280,11 @@
   }
 
   .error-message {
-    color: #dc2626;
+    color: var(--color-error);
     text-align: center;
     padding: 0.5rem;
     border-radius: 0.25rem;
-    background-color: #fee2e2;
+    background-color: var(--color-error-light);
   }
 
   button:disabled {
@@ -359,5 +354,12 @@
     font-size: 2rem;
     margin-bottom: 1rem;
     display: block;
+  }
+
+  .footer {
+    padding: 1rem;
+    text-align: center;
+    background-color: var(--color-background-dark);
+    color: var(--color-background);
   }
 </style>

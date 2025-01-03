@@ -1,5 +1,11 @@
 <script lang="ts">
-  import type { SurveyResponse, Features, FormField } from '../types/Survey';
+  import type {
+    FormField,
+    SurveyResponse,
+    Features,
+    FieldValue,
+    SurveyFormData,
+  } from '../types/Survey';
 
   export let currentStep: number;
   export let onSubmit: (data: SurveyResponse) => Promise<void>;
@@ -9,22 +15,14 @@
   const FIELDS_PER_STEP = 5;
   const TOTAL_STEPS = Math.ceil(formFields.length / FIELDS_PER_STEP);
 
-  type FormDataType = Partial<SurveyResponse> & {
-    features: Partial<Features>;
-    [key: string]: any; // Allow string indexing for dynamic field access
-  };
-
-  type FieldValue = string | number | boolean | undefined;
-
-  // Initialize formData with undefined values for radio buttons
-  let formData: FormDataType = {
+  let formData: SurveyFormData = {
     features: {
-      offline: undefined,
-      collaboration: undefined,
-      assetManagement: undefined,
-      pdfHandling: undefined,
-      versionControl: undefined,
-      workflows: undefined,
+      offline: 0,
+      collaboration: 0,
+      assetManagement: 0,
+      pdfHandling: 0,
+      versionControl: 0,
+      workflows: 0,
     },
     betaInterest: false,
     role: '',
@@ -50,6 +48,7 @@
     customFormats: '',
   };
 
+  // Type the errors object
   let errors: Record<string, string> = {};
   let currentFields: FormField[] = [];
 
@@ -76,35 +75,29 @@
     let isValid = true;
 
     currentFields.forEach((field) => {
-      const fieldName = field.name;
-
-      // Handle nested feature fields
-      if (fieldName.startsWith('features.')) {
-        const [, featureName] = fieldName.split('.') as [string, keyof Features];
-        if (
-          field.required &&
-          (!formData.features || formData.features[featureName] === undefined)
-        ) {
-          errors[fieldName] = `${field.label} is required`;
+      if (field.name.startsWith('features.')) {
+        const [, featureName] = field.name.split('.') as [string, keyof Features];
+        if (field.required && formData.features[featureName] === undefined) {
+          errors[field.name] = `${field.label} is required`;
           isValid = false;
         }
       } else {
-        // Handle regular fields
-        const value = formData[fieldName as keyof SurveyResponse];
-        if (field.required && (value === undefined || value === '')) {
-          errors[fieldName] = `${field.label} is required`;
+        const value = formData[field.name as keyof SurveyResponse];
+        if (field.required && !value) {
+          errors[field.name] = `${field.label} is required`;
           isValid = false;
         }
       }
 
-      // Check dependent fields
       if (field.dependsOn && field.dependsOnValue) {
-        const parentValue = formData[field.dependsOn as keyof SurveyResponse];
-        const fieldValue = formData[fieldName as keyof SurveyResponse];
-        if (parentValue === field.dependsOnValue && !fieldValue) {
-          errors[fieldName] =
-            `${field.label} is required when ${field.dependsOn} is ${field.dependsOnValue}`;
-          isValid = false;
+        const parentValue = formData[field.dependsOn];
+        if (parentValue === field.dependsOnValue) {
+          const value = formData[field.name as keyof SurveyResponse];
+          if (!value) {
+            errors[field.name] =
+              `${field.label} is required when ${field.dependsOn} is ${field.dependsOnValue}`;
+            isValid = false;
+          }
         }
       }
     });
@@ -124,17 +117,20 @@
         features: {
           ...formData.features,
           [featureName]:
-            field.type === 'checkbox' ? Boolean(value) : parseInt(value as string) || 0,
+            field.type === 'checkbox'
+              ? (value as boolean)
+                ? 1
+                : 0
+              : parseInt(value as string) || 0,
         },
       };
     } else {
       formData = {
         ...formData,
-        [field.name]: value,
-      } as FormDataType;
+        [field.name as keyof SurveyResponse]: value,
+      };
     }
 
-    // Clear error when field is updated
     if (errors[field.name]) {
       errors = {
         ...errors,
@@ -172,14 +168,48 @@
       submissionStatus = 'submitting';
       console.log('Submitting form data:', formData);
 
-      await onSubmit(formData as SurveyResponse);
+      // Create a properly typed survey response object
+      const surveyResponse = {
+        role: formData.role,
+        otherRole: formData.otherRole,
+        cmsUsage: formData.cmsUsage,
+        otherCmsUsage: formData.otherCmsUsage,
+        features: formData.features,
+        betaInterest: formData.betaInterest,
+        email: formData.email,
+        biggestFrustrations: formData.biggestFrustrations,
+        specificProblems: formData.specificProblems,
+        usageFrequency: formData.usageFrequency,
+        primaryPurpose: formData.primaryPurpose,
+        platforms: formData.platforms,
+        cmsPreference: formData.cmsPreference,
+        wishedFeatures: formData.wishedFeatures,
+        workflowImportance: formData.workflowImportance,
+        teamSize: formData.teamSize,
+        collaborationFrequency: formData.collaborationFrequency,
+        pricingSensitivity: formData.pricingSensitivity,
+        pricingModel: formData.pricingModel,
+        integrations: formData.integrations,
+        integrationImportance: formData.integrationImportance,
+        contentTypes: formData.contentTypes,
+        customFormats: formData.customFormats,
+        feedbackSuggestions: formData.feedbackSuggestions,
+        excitementFactors: formData.excitementFactors,
+        collaborationChallenges: formData.collaborationChallenges,
+        offlineWorkFrequency: formData.offlineWorkFrequency,
+        offlineWorkarounds: formData.offlineWorkarounds,
+        currentChangeConflictHandling: formData.currentChangeConflictHandling,
+        versionControlChallenges: formData.versionControlChallenges,
+      } as const;
+
+      await onSubmit({ id: '', createdAt: '', ...surveyResponse });
       submissionStatus = 'success';
       showThankYou = true;
       console.log('Submission successful');
     } catch (error) {
       console.error('Form submission error:', error);
       submissionStatus = 'error';
-      throw error; // Propagate error to parent
+      throw error;
     } finally {
       isSubmitting = false;
     }
@@ -194,7 +224,7 @@
       const [, featureName] = field.name.split('.') as [string, keyof Features];
       return formData.features[featureName];
     }
-    return formData[field.name];
+    return formData[field.name] as FieldValue;
   }
 
   function setFieldValue(field: FormField, value: FieldValue): void {
@@ -202,13 +232,10 @@
       const [, featureName] = field.name.split('.') as [string, keyof Features];
       formData.features = {
         ...formData.features,
-        [featureName]: value,
+        [featureName]: value as number,
       };
     } else {
-      formData = {
-        ...formData,
-        [field.name]: value,
-      };
+      formData[field.name] = value;
     }
   }
 

@@ -10,13 +10,7 @@ const formFields: FormField[] = [
     type: 'select',
     name: 'role',
     required: true,
-    options: [
-      'Developer',
-      'Content Editor',
-      'Manager',
-      'Designer',
-      'Other (please specify)'
-    ]
+    options: ['Developer', 'Content Editor', 'Manager', 'Designer', 'Other (please specify)'],
   },
   {
     id: 'otherRole',
@@ -24,7 +18,7 @@ const formFields: FormField[] = [
     type: 'text',
     name: 'otherRole',
     dependsOn: 'role',
-    dependsOnValue: 'Other (please specify)'
+    dependsOnValue: 'Other (please specify)',
   },
 
   // Current Usage
@@ -34,7 +28,7 @@ const formFields: FormField[] = [
     type: 'select',
     name: 'cmsUsage',
     required: true,
-    options: ['WordPress', 'Drupal', 'Shopify', 'Custom-built', 'None', 'Other']
+    options: ['WordPress', 'Drupal', 'Shopify', 'Custom-built', 'None', 'Other'],
   },
   {
     id: 'otherCmsUsage',
@@ -42,7 +36,7 @@ const formFields: FormField[] = [
     type: 'text',
     name: 'otherCmsUsage',
     dependsOn: 'cmsUsage',
-    dependsOnValue: 'Other'
+    dependsOnValue: 'Other',
   },
   {
     id: 'usageFrequency',
@@ -50,23 +44,25 @@ const formFields: FormField[] = [
     type: 'select',
     name: 'usageFrequency',
     required: true,
-    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
+    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never'],
   },
 
   // Primary Purpose & Platforms
   {
     id: 'primaryPurpose',
-    label: 'What is your primary purpose for using a CMS? (e.g., blog publishing, e-commerce, project docs)',
+    label:
+      'What is your primary purpose for using a CMS? (e.g., blog publishing, e-commerce, project docs)',
     type: 'text',
     name: 'primaryPurpose',
-    required: true
+    required: true,
   },
   {
     id: 'platforms',
-    label: 'Which platforms do you use most with your CMS? (e.g., WordPress, Shopify, custom-built)',
+    label:
+      'Which platforms do you use most with your CMS? (e.g., WordPress, Shopify, custom-built)',
     type: 'text',
     name: 'platforms',
-    required: true
+    required: true,
   },
 
   // Frustrations & Desired Features
@@ -74,25 +70,25 @@ const formFields: FormField[] = [
     id: 'biggestFrustrations',
     label: 'What are your biggest frustrations with your current CMS?',
     type: 'textarea',
-    name: 'biggestFrustrations'
+    name: 'biggestFrustrations',
   },
   {
     id: 'specificProblems',
     label: 'What specific problems do you want solved?',
     type: 'textarea',
-    name: 'specificProblems'
+    name: 'specificProblems',
   },
   {
     id: 'wishedFeatures',
     label: 'Which features do you wish you had? (e.g., advanced workflows, offline access)',
     type: 'textarea',
-    name: 'wishedFeatures'
+    name: 'wishedFeatures',
   },
   {
     id: 'cmsPreference',
     label: 'What do you look for in a CMS?',
     type: 'textarea',
-    name: 'cmsPreference'
+    name: 'cmsPreference',
   },
 
   // Feature Importance Ratings
@@ -102,7 +98,7 @@ const formFields: FormField[] = [
     type: 'radio',
     name: 'features.offline',
     required: true,
-    options: ['1', '2', '3', '4', '5']
+    options: ['1', '2', '3', '4', '5'],
   },
   {
     id: 'features.collaboration',
@@ -110,7 +106,7 @@ const formFields: FormField[] = [
     type: 'radio',
     name: 'features.collaboration',
     required: true,
-    options: ['1', '2', '3', '4', '5']
+    options: ['1', '2', '3', '4', '5'],
   },
   {
     id: 'features.assetManagement',
@@ -118,7 +114,7 @@ const formFields: FormField[] = [
     type: 'radio',
     name: 'features.assetManagement',
     required: true,
-    options: ['1', '2', '3', '4', '5']
+    options: ['1', '2', '3', '4', '5'],
   },
   {
     id: 'features.pdfHandling',
@@ -126,7 +122,7 @@ const formFields: FormField[] = [
     type: 'radio',
     name: 'features.pdfHandling',
     required: true,
-    options: ['1', '2', '3', '4', '5']
+    options: ['1', '2', '3', '4', '5'],
   },
   {
     id: 'features.versionControl',
@@ -134,7 +130,7 @@ const formFields: FormField[] = [
     type: 'radio',
     name: 'features.versionControl',
     required: true,
-    options: ['1', '2', '3', '4', '5']
+    options: ['1', '2', '3', '4', '5'],
   },
   {
     id: 'features.workflows',
@@ -142,7 +138,7 @@ const formFields: FormField[] = [
     type: 'radio',
     name: 'features.workflows',
     required: true,
-    options: ['1', '2', '3', '4', '5']
+    options: ['1', '2', '3', '4', '5'],
   },
 
   // Collaboration & Team Size
@@ -152,45 +148,46 @@ const formFields: FormField[] = [
     type: 'select',
     name: 'teamSize',
     required: true,
-    options: ['Solo', '2-5', '6-10', '11-20', '20+']
+    options: ['Solo', '2-5', '6-10', '11-20', '20+'],
   },
   {
     id: 'collaborationFrequency',
     label: 'How often do you collaborate? (e.g., real-time editing, approvals, shared workspaces)',
     type: 'select',
     name: 'collaborationFrequency',
-    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never']
+    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never'],
   },
   {
     id: 'collaborationChallenges',
-    label: 'What challenges do you face when multiple team members need to edit content simultaneously?',
+    label:
+      'What challenges do you face when multiple team members need to edit content simultaneously?',
     type: 'textarea',
-    name: 'collaborationChallenges'
+    name: 'collaborationChallenges',
   },
   {
     id: 'offlineWorkFrequency',
     label: 'How often do you need to work on content without reliable internet access?',
     type: 'select',
     name: 'offlineWorkFrequency',
-    options: ['Always', 'Frequently', 'Sometimes', 'Rarely', 'Never']
+    options: ['Always', 'Frequently', 'Sometimes', 'Rarely', 'Never'],
   },
   {
     id: 'offlineWorkarounds',
     label: 'What workarounds do you currently use when working offline?',
     type: 'textarea',
-    name: 'offlineWorkarounds'
+    name: 'offlineWorkarounds',
   },
   {
     id: 'currentChangeConflictHandling',
     label: 'How do you currently handle conflicts when multiple team members make changes?',
     type: 'textarea',
-    name: 'currentChangeConflictHandling'
+    name: 'currentChangeConflictHandling',
   },
   {
     id: 'versionControlChallenges',
     label: 'What challenges do you face in tracking content changes across your team?',
     type: 'textarea',
-    name: 'versionControlChallenges'
+    name: 'versionControlChallenges',
   },
 
   // Pricing
@@ -199,14 +196,14 @@ const formFields: FormField[] = [
     label: 'Which pricing range best fits your budget?',
     type: 'select',
     name: 'pricingSensitivity',
-    options: ['Free', '$1-50/mo', '$51-200/mo', '$201-500/mo', '$500+/mo']
+    options: ['Free', '$1-50/mo', '$51-200/mo', '$201-500/mo', '$500+/mo'],
   },
   {
     id: 'pricingModel',
     label: 'Preferred pricing model (optional: please explain if needed)',
     type: 'select',
     name: 'pricingModel',
-    options: ['Subscription', 'One-time purchase', 'Free/Open Source', 'Other']
+    options: ['Subscription', 'One-time purchase', 'Free/Open Source', 'Other'],
   },
 
   // Content Types & Custom Formats
@@ -214,13 +211,13 @@ const formFields: FormField[] = [
     id: 'contentTypes',
     label: 'What types of content do you work with?',
     type: 'textarea',
-    name: 'contentTypes'
+    name: 'contentTypes',
   },
   {
     id: 'customFormats',
     label: 'Any specific custom formats you need to support? (e.g., videos, proprietary docs)',
     type: 'textarea',
-    name: 'customFormats'
+    name: 'customFormats',
   },
 
   // Beta Testing
@@ -228,7 +225,7 @@ const formFields: FormField[] = [
     id: 'betaInterest',
     label: 'Would you like to participate in beta testing? (Your email will be kept private)',
     type: 'checkbox',
-    name: 'betaInterest'
+    name: 'betaInterest',
   },
   {
     id: 'email',
@@ -236,14 +233,11 @@ const formFields: FormField[] = [
     type: 'email',
     name: 'email',
     dependsOn: 'betaInterest',
-    dependsOnValue: true
+    dependsOnValue: true,
   },
 ];
 ---
 
 <Layout title="LocalHaven CMS">
-  <LandingPage 
-    client:load 
-    {formFields}
-  />
+  <LandingPage client:load {formFields} />
 </Layout>
