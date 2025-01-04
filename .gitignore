@@ -23,7 +23,6 @@ backend/localhavencms.db
 Thumbs.db
 
 # IDE files
-.vscode/
 .idea/
 *.swp
 

@@ -2,14 +2,14 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8090:8090"
+      - "8092:8092"
     environment:
       - JWT_SECRET=local_dev_secret
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=password
       - ALLOWED_ORIGINS=http://localhost:4321
       - ENVIRONMENT=development
-      - PORT=8090
+      - PORT=8092
     volumes:
       - backend_data:/app/data
     healthcheck:
@@ -33,7 +33,7 @@ services:
     ports:
       - "4321:4321"
     environment:
-      - PUBLIC_API_URL=http://localhost:8090
+      - PUBLIC_API_URL=http://localhost:8092
     volumes:
       - ./web:/app
       - web_node_modules:/app/node_modules

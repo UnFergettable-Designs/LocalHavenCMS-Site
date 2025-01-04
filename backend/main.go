@@ -709,6 +709,46 @@ func getMetrics(c *gin.Context) {
 	c.JSON(http.StatusOK, metrics)
 }
 
+func setupRouter(env string) *gin.Engine {
+	r := gin.Default()
+
+	// Disable rate limiting for preview environment
+	if os.Getenv("RATE_LIMIT_DISABLED") == "true" {
+		r.GET("/health", func(c *gin.Context) {
+			c.Header("X-Environment", "preview")
+			c.String(200, "healthy")
+		})
+	} else {
+		// Use rate limiting
+		r.Use(rateLimitMiddleware())
+
+		// Public routes
+		r.POST("/survey", endpointRateLimiter(rate.Every(time.Minute), 5), submitSurvey)
+		r.POST("/login", endpointRateLimiter(rate.Every(time.Minute), 3), login)
+
+		// Add explicit health check logging
+		r.GET("/health", func(c *gin.Context) {
+			log.Printf("Health check from: %s", c.Request.Host)
+			c.JSON(http.StatusOK, gin.H{
+				"status": "healthy",
+				"host":   c.Request.Host,
+			})
+		})
+
+		// Protected routes
+		authorized := r.Group("/")
+		authorized.Use(AuthMiddleware())
+		{
+			authorized.GET("/results", getSurveyResults)
+			authorized.GET("/verify", verifyToken)
+			authorized.DELETE("/results/:id", deleteResult)
+			authorized.GET("/metrics", getMetrics)
+		}
+	}
+
+	return r
+}
+
 func main() {
 	// Set Gin mode based on environment
 	if getEnvWithFallback("ENVIRONMENT", "development") == "production" {
@@ -726,13 +766,13 @@ func main() {
 	initDB()
 	defer db.Close()
 
-	router := gin.Default()
-
 	// Set trusted proxies with proper error handling
 	trustedProxies, err := getTrustedProxies()
 	if err != nil {
 		log.Fatalf("Failed to configure trusted proxies: %v", err)
 	}
+
+	router := setupRouter(os.Getenv("ENVIRONMENT"))
 
 	if err := router.SetTrustedProxies(trustedProxies); err != nil {
 		log.Fatalf("Failed to set trusted proxies: %v", err)
@@ -740,72 +780,6 @@ func main() {
 
 	// Log the configured trusted proxies
 	log.Printf("Configured trusted proxies: %v", trustedProxies)
-
-	router.Use(func(c *gin.Context) {
-		allowedOrigins := []string{
-			"http://localhost:3000",
-			"https://localhavencms.com",
-			"https://www.localhavencms.com",
-			"https://api.localhavencms.com",
-		}
-
-		// Log the incoming request details for debugging
-		log.Printf("Incoming request from: %s to: %s", c.Request.Host, c.Request.URL.Path)
-
-		origin := c.Request.Header.Get("Origin")
-		if origin != "" {
-			for _, allowedOrigin := range allowedOrigins {
-				if origin == allowedOrigin {
-					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-					break
-				}
-			}
-		}
-
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		// Set security headers
-		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
-		c.Writer.Header().Set("X-Frame-Options", "DENY")
-		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
-
-		c.Next()
-	})
-
-	// Use rate limiting
-	router.Use(rateLimitMiddleware())
-
-	// Public routes
-	router.POST("/survey", endpointRateLimiter(rate.Every(time.Minute), 5), submitSurvey)
-	router.POST("/login", endpointRateLimiter(rate.Every(time.Minute), 3), login)
-
-	// Add explicit health check logging
-	router.GET("/health", func(c *gin.Context) {
-		log.Printf("Health check from: %s", c.Request.Host)
-		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
-			"host":   c.Request.Host,
-		})
-	})
-
-	// Protected routes
-
-	authorized := router.Group("/")
-	authorized.Use(AuthMiddleware())
-	{
-		authorized.GET("/results", getSurveyResults)
-		authorized.GET("/verify", verifyToken)
-		authorized.DELETE("/results/:id", deleteResult)
-		authorized.GET("/metrics", getMetrics)
-	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
