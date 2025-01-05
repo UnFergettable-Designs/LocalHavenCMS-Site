@@ -3,6 +3,9 @@
   "manifest": {
     "version": 1,
     "install": {
+      "go": {
+        "pkg-path": "go"
+      },
       "nodejs_22": {
         "pkg-path": "nodejs_22"
       },
@@ -36,6 +39,126 @@
   },
   "packages": [
     {
+      "attr_path": "go",
+      "broken": false,
+      "derivation": "/nix/store/56rv2z6sv5b1vzica5xpszjqvd21gqr7-go-1.23.3.drv",
+      "description": "Go Programming language",
+      "install_id": "go",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "name": "go-1.23.3",
+      "pname": "go",
+      "rev": "d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "rev_count": 724962,
+      "rev_date": "2024-12-19T23:01:11Z",
+      "scrape_date": "2024-12-23T03:54:12Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.23.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/w5cxqj1wmbl3wp6arpyl90g66hjs0823-go-1.23.3"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "go",
+      "broken": false,
+      "derivation": "/nix/store/7z5w6l4z1am909fazspdizhd8hjcrldd-go-1.23.3.drv",
+      "description": "Go Programming language",
+      "install_id": "go",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "name": "go-1.23.3",
+      "pname": "go",
+      "rev": "d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "rev_count": 724962,
+      "rev_date": "2024-12-19T23:01:11Z",
+      "scrape_date": "2024-12-23T03:54:12Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.23.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/09zl6c5i31x18w55qskc0kbp32arvvlr-go-1.23.3"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "go",
+      "broken": false,
+      "derivation": "/nix/store/bg18qs459wx00nfwwapdxq5xvvv4sdyh-go-1.23.3.drv",
+      "description": "Go Programming language",
+      "install_id": "go",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "name": "go-1.23.3",
+      "pname": "go",
+      "rev": "d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "rev_count": 724962,
+      "rev_date": "2024-12-19T23:01:11Z",
+      "scrape_date": "2024-12-23T03:54:12Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.23.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/alkrwr7w62qp3160q0azcvnyn0184hw3-go-1.23.3"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "go",
+      "broken": false,
+      "derivation": "/nix/store/k427v9wgcg9ify27mcqxrkpw5fd16xmg-go-1.23.3.drv",
+      "description": "Go Programming language",
+      "install_id": "go",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "name": "go-1.23.3",
+      "pname": "go",
+      "rev": "d70bd19e0a38ad4790d3913bf08fcbfc9eeca507",
+      "rev_count": 724962,
+      "rev_date": "2024-12-19T23:01:11Z",
+      "scrape_date": "2024-12-23T03:54:12Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.23.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/zhq8dnjbhwspzdglyq28j74axvqyk86q-go-1.23.3"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
       "attr_path": "nodejs_22",
       "broken": false,
       "derivation": "/nix/store/10kk87phm9rrgxawdw9bmkp2sjh3h9bx-nodejs-22.10.0.drv",
@@ -50,6 +173,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -80,6 +204,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -110,6 +235,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -140,6 +266,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -170,6 +297,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -199,6 +327,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -228,6 +357,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
@@ -257,6 +387,7 @@
       "rev_date": "2024-12-19T23:01:11Z",
       "scrape_date": "2024-12-23T03:54:12Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,

@@ -1,36 +1,35 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import { env } from 'process';
-
 import svelte from '@astrojs/svelte';
 
-import node from '@astrojs/node';
-
-const isProd = env.NODE_ENV === 'production';
+const port = typeof process !== 'undefined' && env.PORT 
+  ? parseInt(env.PORT) 
+  : 4320;
+const isPreview = typeof process !== 'undefined' && env.NODE_ENV === 'preview';
 
 // https://astro.build/config
+/** @type {import('astro').AstroUserConfig} */
 export default defineConfig({
-  integrations: [svelte({ extensions: ['.svelte'] })],
-
-  adapter: node({
-    mode: 'standalone',
-  }),
-
+  integrations: [svelte()],
+  
+  output: 'static',
+  
   server: {
-    port: isProd ? 4321 : 4320,
+    port,
     host: true
   },
-  output: 'static',
-  build: {
-    serverEntry: 'entry.mjs',
-  },
+
   vite: {
     server: {
       watch: {
         ignored: ['**/node_modules/**', '**/dist/**'],
       },
-      port: isProd ? 4321 : 4320,
-      strictPort: true,
-    },
-  },
+      hmr: {
+        protocol: 'ws',
+        clientPort: isPreview ? port : undefined,
+        host: isPreview ? '0.0.0.0' : undefined
+      }
+    }
+  }
 });

@@ -1,243 +1,65 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import LandingPage from '../components/LandingPage.svelte';
-import type { FormField } from '../types/Survey';
+import { Laptop, Users, Folder, Code } from 'lucide-astro';
+import LocalHavenLogo from '../assets/LocalHavenCMS.webp';
+import '../styles/landing.css';
 
-const formFields: FormField[] = [
+const features = [
   {
-    id: 'role',
-    label: 'What is your role? (If other, please specify in the text box)',
-    type: 'select',
-    name: 'role',
-    required: true,
-    options: ['Developer', 'Content Editor', 'Manager', 'Designer', 'Other (please specify)'],
+    Icon: Laptop,
+    title: 'Work Anywhere',
+    description: 'True offline-first architecture ensures uninterrupted work',
   },
   {
-    id: 'otherRole',
-    label: 'Please specify your role (if you selected "Other")',
-    type: 'text',
-    name: 'otherRole',
-    dependsOn: 'role',
-    dependsOnValue: 'Other (please specify)',
-  },
-
-  // Current Usage
-  {
-    id: 'cmsUsage',
-    label: 'Which CMS do you currently use?',
-    type: 'select',
-    name: 'cmsUsage',
-    required: true,
-    options: ['WordPress', 'Drupal', 'Shopify', 'Custom-built', 'None', 'Other'],
+    Icon: Users,
+    title: 'Real-Time Collaboration',
+    description: 'Seamless team coordination across devices',
   },
   {
-    id: 'otherCmsUsage',
-    label: 'If other CMS, please specify',
-    type: 'text',
-    name: 'otherCmsUsage',
-    dependsOn: 'cmsUsage',
-    dependsOnValue: 'Other',
+    Icon: Folder,
+    title: 'Asset Management',
+    description: 'Efficient handling of all your digital content',
   },
   {
-    id: 'usageFrequency',
-    label: 'How often do you use your CMS?',
-    type: 'select',
-    name: 'usageFrequency',
-    required: true,
-    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never'],
-  },
-
-  // Primary Purpose & Platforms
-  {
-    id: 'primaryPurpose',
-    label:
-      'What is your primary purpose for using a CMS? (e.g., blog publishing, e-commerce, project docs)',
-    type: 'text',
-    name: 'primaryPurpose',
-    required: true,
-  },
-  {
-    id: 'platforms',
-    label:
-      'Which platforms do you use most with your CMS? (e.g., WordPress, Shopify, custom-built)',
-    type: 'text',
-    name: 'platforms',
-    required: true,
-  },
-
-  // Frustrations & Desired Features
-  {
-    id: 'biggestFrustrations',
-    label: 'What are your biggest frustrations with your current CMS?',
-    type: 'textarea',
-    name: 'biggestFrustrations',
-  },
-  {
-    id: 'specificProblems',
-    label: 'What specific problems do you want solved?',
-    type: 'textarea',
-    name: 'specificProblems',
-  },
-  {
-    id: 'wishedFeatures',
-    label: 'Which features do you wish you had? (e.g., advanced workflows, offline access)',
-    type: 'textarea',
-    name: 'wishedFeatures',
-  },
-  {
-    id: 'cmsPreference',
-    label: 'What do you look for in a CMS?',
-    type: 'textarea',
-    name: 'cmsPreference',
-  },
-
-  // Feature Importance Ratings
-  {
-    id: 'features.offline',
-    label: 'Rate the importance of offline capability (1-5)',
-    type: 'radio',
-    name: 'features.offline',
-    required: true,
-    options: ['1', '2', '3', '4', '5'],
-  },
-  {
-    id: 'features.collaboration',
-    label: 'How important is real-time collaboration? (1-5)',
-    type: 'radio',
-    name: 'features.collaboration',
-    required: true,
-    options: ['1', '2', '3', '4', '5'],
-  },
-  {
-    id: 'features.assetManagement',
-    label: 'How important is asset management? (1-5)',
-    type: 'radio',
-    name: 'features.assetManagement',
-    required: true,
-    options: ['1', '2', '3', '4', '5'],
-  },
-  {
-    id: 'features.pdfHandling',
-    label: 'How important is PDF handling? (1-5)',
-    type: 'radio',
-    name: 'features.pdfHandling',
-    required: true,
-    options: ['1', '2', '3', '4', '5'],
-  },
-  {
-    id: 'features.versionControl',
-    label: 'How important is version control? (1-5)',
-    type: 'radio',
-    name: 'features.versionControl',
-    required: true,
-    options: ['1', '2', '3', '4', '5'],
-  },
-  {
-    id: 'features.workflows',
-    label: 'How important are customizable workflows? (1-5)',
-    type: 'radio',
-    name: 'features.workflows',
-    required: true,
-    options: ['1', '2', '3', '4', '5'],
-  },
-
-  // Collaboration & Team Size
-  {
-    id: 'teamSize',
-    label: 'What is your team size?',
-    type: 'select',
-    name: 'teamSize',
-    required: true,
-    options: ['Solo', '2-5', '6-10', '11-20', '20+'],
-  },
-  {
-    id: 'collaborationFrequency',
-    label: 'How often do you collaborate? (e.g., real-time editing, approvals, shared workspaces)',
-    type: 'select',
-    name: 'collaborationFrequency',
-    options: ['Daily', 'Weekly', 'Monthly', 'Rarely', 'Never'],
-  },
-  {
-    id: 'collaborationChallenges',
-    label:
-      'What challenges do you face when multiple team members need to edit content simultaneously?',
-    type: 'textarea',
-    name: 'collaborationChallenges',
-  },
-  {
-    id: 'offlineWorkFrequency',
-    label: 'How often do you need to work on content without reliable internet access?',
-    type: 'select',
-    name: 'offlineWorkFrequency',
-    options: ['Always', 'Frequently', 'Sometimes', 'Rarely', 'Never'],
-  },
-  {
-    id: 'offlineWorkarounds',
-    label: 'What workarounds do you currently use when working offline?',
-    type: 'textarea',
-    name: 'offlineWorkarounds',
-  },
-  {
-    id: 'currentChangeConflictHandling',
-    label: 'How do you currently handle conflicts when multiple team members make changes?',
-    type: 'textarea',
-    name: 'currentChangeConflictHandling',
-  },
-  {
-    id: 'versionControlChallenges',
-    label: 'What challenges do you face in tracking content changes across your team?',
-    type: 'textarea',
-    name: 'versionControlChallenges',
-  },
-
-  // Pricing
-  {
-    id: 'pricingSensitivity',
-    label: 'Which pricing range best fits your budget?',
-    type: 'select',
-    name: 'pricingSensitivity',
-    options: ['Free', '$1-50/mo', '$51-200/mo', '$201-500/mo', '$500+/mo'],
-  },
-  {
-    id: 'pricingModel',
-    label: 'Preferred pricing model (optional: please explain if needed)',
-    type: 'select',
-    name: 'pricingModel',
-    options: ['Subscription', 'One-time purchase', 'Free/Open Source', 'Other'],
-  },
-
-  // Content Types & Custom Formats
-  {
-    id: 'contentTypes',
-    label: 'What types of content do you work with?',
-    type: 'textarea',
-    name: 'contentTypes',
-  },
-  {
-    id: 'customFormats',
-    label: 'Any specific custom formats you need to support? (e.g., videos, proprietary docs)',
-    type: 'textarea',
-    name: 'customFormats',
-  },
-
-  // Beta Testing
-  {
-    id: 'betaInterest',
-    label: 'Would you like to participate in beta testing? (Your email will be kept private)',
-    type: 'checkbox',
-    name: 'betaInterest',
-  },
-  {
-    id: 'email',
-    label: 'Email address for beta testing (optional if you opted in)',
-    type: 'email',
-    name: 'email',
-    dependsOn: 'betaInterest',
-    dependsOnValue: true,
+    Icon: Code,
+    title: 'Developer Friendly',
+    description: 'Built with modern tech stack for maximum flexibility',
   },
 ];
 ---
 
 <Layout title="LocalHaven CMS">
-  <LandingPage client:load {formFields} />
+  <section class="landing-page">
+    <div class="min-h-screen">
+      <header class="header">
+        <img src={LocalHavenLogo.src} alt="LocalHaven CMS Logo" class="logo" />
+        <h1 class="visually-hidden">LocalHaven CMS</h1>
+      </header>
+
+      <section class="container">
+        <div class="hero">
+          <h1>LocalHaven CMS</h1>
+          <p class="lead">
+            LocalHaven is a headless CMS that lets your team create and manage content from anywhere,
+            online or off, with real-time collaboration that just works.
+          </p>
+          <a href="/survey" class="cta-button primary">Take Our Survey</a>
+        </div>
+        
+        <div class="features-grid">
+          {features.map(({ Icon, title, description }) => (
+            <div class="feature-card">
+              <Icon size={32} class="feature-icon" />
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <p>&copy; 2024 LocalHaven CMS. All rights reserved.</p>
+    </footer>
+  </section>
 </Layout>
