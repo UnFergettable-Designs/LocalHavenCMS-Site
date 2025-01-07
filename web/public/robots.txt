@@ -1,0 +1,29 @@
+User-agent: *
+Disallow: /login
+Disallow: /admin
+Disallow: /preview
+Allow: /
+
+# Prevent health check endpoints from being crawled
+Disallow: /health
+
+# Allow common search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /login
+Disallow: /admin
+Disallow: /preview
+Disallow: /health
+
+User-agent: bingbot
+Allow: /
+Disallow: /login
+Disallow: /admin
+Disallow: /preview
+Disallow: /health
+
+# Add longer crawl delay for preview environments
+Crawl-delay: 10
+
+# Sitemap location (if you have one)
+# Sitemap: https://localhavencms.com/sitemap.xml

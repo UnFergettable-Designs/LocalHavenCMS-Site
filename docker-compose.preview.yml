@@ -1,0 +1,45 @@
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.preview
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - NODE_ENV=preview
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1
+      - API_HOST=backend
+      - API_PORT=8091 # Changed from 8090
+    ports:
+      - "80:80"  # Changed from 3001:80 for Coolify compatibility
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.preview
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8091/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - GIN_MODE=debug
+      - RATE_LIMIT_DISABLED=true
+      - MAX_REQUESTS=0
+      - PORT=8091 # Changed from 8090
+      - JWT_SECRET=preview-secret
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=preview
+      - ALLOWED_ORIGINS=*  # Allow all origins in preview
+    ports:
+      - "8091:8091" # Changed from 8090:8090
+    volumes:
+      - ./backend/data:/app/data

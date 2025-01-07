@@ -1,0 +1,20 @@
+# Development stage
+FROM node:22-slim AS development
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package files and install dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
+
+# Copy source code
+COPY . .
+
+# Expose dev server port
+EXPOSE 4321
+
+# Default to dev command
+CMD ["pnpm", "dev", "--host"]
