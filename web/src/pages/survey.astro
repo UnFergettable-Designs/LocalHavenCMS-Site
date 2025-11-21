@@ -1,0 +1,120 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SurveyPage from '../components/SurveyPage.svelte';
+import type { FormField } from '../types/Survey';
+
+const formFields: FormField[] = [
+  {
+    id: 'teamSize',
+    label: 'What size is your team?',
+    type: 'select',
+    options: ['1-5', '6-20', '21-50', '51-200', '200+'],
+    required: true,
+    name: 'teamSize'
+  },
+  {
+    id: 'role',
+    label: 'What role best describes you?',
+    type: 'select',
+    options: ['Developer', 'Content Editor', 'Designer', 'Manager', 'Other'],
+    required: true,
+    name: 'role'
+  },
+  {
+    id: 'cmsUsage',
+    label: 'Do you currently use a CMS?',
+    type: 'select',
+    options: ['Yes', 'No'],
+    required: true,
+    name: 'cmsUsage'
+  },
+  {
+    id: 'features',
+    label: 'Rate the importance of these features (1-5)',
+    type: 'radio',
+    options: ['1', '2', '3', '4', '5'],
+    required: true,
+    name: 'features'
+  },
+  {
+    id: 'pricingModel',
+    label: 'Preferred pricing model?',
+    type: 'select',
+    options: ['Per User', 'Per Project', 'Usage Based', 'Flat Rate'],
+    required: true,
+    name: 'pricingModel'
+  },
+  {
+    id: 'betaInterest',
+    label: 'Interested in beta testing?',
+    type: 'select',
+    options: ['Yes', 'No'],
+    required: true,
+    name: 'betaInterest'
+  },
+  {
+    id: 'email',
+    label: 'Email (if interested in beta)',
+    type: 'email',
+    required: false,
+    name: 'email',
+    dependsOn: 'betaInterest',
+    dependsOnValue: true
+  },
+  {
+    id: 'biggestFrustrations',
+    label: 'What are your biggest frustrations with current CMS solutions?',
+    type: 'textarea',
+    required: true,
+    name: 'biggestFrustrations'
+  },
+  {
+    id: 'specificProblems',
+    label: 'What specific problems are you trying to solve?',
+    type: 'textarea',
+    required: true,
+    name: 'specificProblems'
+  },
+  {
+    id: 'usageFrequency',
+    label: 'How often do you use your CMS?',
+    type: 'select',
+    options: ['Daily', 'Weekly', 'Monthly', 'Rarely'],
+    required: true,
+    name: 'usageFrequency'
+  },
+  {
+    id: 'primaryPurpose',
+    label: 'What is your primary purpose for using a CMS?',
+    type: 'textarea',
+    required: true,
+    name: 'primaryPurpose'
+  },
+  {
+    id: 'platforms',
+    label: 'Which platforms do you primarily work with?',
+    type: 'textarea',
+    required: true,
+    name: 'platforms'
+  },
+  {
+    id: 'collaborationChallenges',
+    label: 'What challenges do you face with team collaboration?',
+    type: 'textarea',
+    required: true,
+    name: 'collaborationChallenges'
+  },
+  {
+    id: 'offlineWorkFrequency',
+    label: 'How often do you need to work offline?',
+    type: 'select',
+    options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'],
+    required: true,
+    name: 'offlineWorkFrequency'
+  }
+];
+---
+
+<Layout title="Survey - LocalHaven CMS">
+  <SurveyPage client:load {formFields} />
+</Layout>

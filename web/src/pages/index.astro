@@ -1,8 +1,65 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import LandingPage from '../components/LandingPage.svelte';
+import { Laptop, Users, Folder, Code } from 'lucide-astro';
+import LocalHavenLogo from '../assets/LocalHavenCMS.webp';
+import '../styles/landing.css';
+
+const features = [
+  {
+    Icon: Laptop,
+    title: 'Work Anywhere',
+    description: 'True offline-first architecture ensures uninterrupted work',
+  },
+  {
+    Icon: Users,
+    title: 'Real-Time Collaboration',
+    description: 'Seamless team coordination across devices',
+  },
+  {
+    Icon: Folder,
+    title: 'Asset Management',
+    description: 'Efficient handling of all your digital content',
+  },
+  {
+    Icon: Code,
+    title: 'Developer Friendly',
+    description: 'Built with modern tech stack for maximum flexibility',
+  },
+];
 ---
 
 <Layout title="LocalHaven CMS">
-  <LandingPage client:load />
+  <section class="landing-page">
+    <div class="min-h-screen">
+      <header class="header">
+        <img src={LocalHavenLogo.src} alt="LocalHaven CMS Logo" class="logo" />
+        <h1 class="visually-hidden">LocalHaven CMS</h1>
+      </header>
+
+      <section class="container">
+        <div class="hero">
+          <h1>LocalHaven CMS</h1>
+          <p class="lead">
+            LocalHaven is a headless CMS that lets your team create and manage content from anywhere,
+            online or off, with real-time collaboration that just works.
+          </p>
+          <a href="/survey" class="cta-button primary">Take Our Survey</a>
+        </div>
+        
+        <div class="features-grid">
+          {features.map(({ Icon, title, description }) => (
+            <div class="feature-card">
+              <Icon size={32} class="feature-icon" />
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <p>&copy; 2024 LocalHaven CMS. All rights reserved.</p>
+    </footer>
+  </section>
 </Layout>

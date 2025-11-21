@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -14,39 +14,45 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/time/rate"
 )
 
 type SurveyResponse struct {
-	ID                    int64     `json:"id"`
-	Role                  string    `json:"role"`
-	OtherRole             string    `json:"otherRole"`
-	CmsUsage              string    `json:"cmsUsage"`
-	OtherCmsUsage         string    `json:"otherCmsUsage"`
-	Features              Features  `json:"features"`
-	BetaInterest          bool      `json:"betaInterest"`
-	Email                 string    `json:"email"`
-	CreatedAt             time.Time `json:"created_at"`
-	BiggestFrustrations   string    `json:"biggestFrustrations"`
-	SpecificProblems      string    `json:"specificProblems"`
-	UsageFrequency        string    `json:"usageFrequency"`
-	PrimaryPurpose        string    `json:"primaryPurpose"`
-	Platforms             string    `json:"platforms"`
-	CmsPreference         string    `json:"cmsPreference"`
-	WishedFeatures        string    `json:"wishedFeatures"`
-	WorkflowImportance    string    `json:"workflowImportance"`
-	TeamSize              string    `json:"teamSize"`
-	CollaborationFrequency string   `json:"collaborationFrequency"`
-	PricingSensitivity    string    `json:"pricingSensitivity"`
-	PricingModel          string    `json:"pricingModel"`
-	Integrations          string    `json:"integrations"`
-	IntegrationImportance string    `json:"integrationImportance"`
-	ContentTypes          string    `json:"contentTypes"`
-	CustomFormats         string    `json:"customFormats"`
-	FeedbackSuggestions   string    `json:"feedbackSuggestions"`
-	ExcitementFactors     string    `json:"excitementFactors"`
+	ID                            string    `json:"id"`
+	Role                          string    `json:"role"`
+	OtherRole                     string    `json:"otherRole,omitempty"`
+	CmsUsage                      string    `json:"cmsUsage"`
+	OtherCmsUsage                 string    `json:"otherCmsUsage,omitempty"`
+	Features                      Features  `json:"features"`
+	BetaInterest                  bool      `json:"betaInterest"`
+	Email                         string    `json:"email,omitempty"`
+	CreatedAt                     time.Time `json:"createdAt"`
+	BiggestFrustrations           string    `json:"biggestFrustrations"`
+	SpecificProblems              string    `json:"specificProblems"`
+	UsageFrequency                string    `json:"usageFrequency"`
+	PrimaryPurpose                string    `json:"primaryPurpose"`
+	Platforms                     string    `json:"platforms"`
+	CmsPreference                 string    `json:"cmsPreference"`
+	WishedFeatures                string    `json:"wishedFeatures"`
+	WorkflowImportance            string    `json:"workflowImportance"`
+	TeamSize                      string    `json:"teamSize"`
+	CollaborationFrequency        string    `json:"collaborationFrequency"`
+	PricingSensitivity            string    `json:"pricingSensitivity"`
+	PricingModel                  string    `json:"pricingModel"`
+	Integrations                  string    `json:"integrations"`
+	IntegrationImportance         string    `json:"integrationImportance"`
+	ContentTypes                  string    `json:"contentTypes"`
+	CustomFormats                 string    `json:"customFormats"`
+	FeedbackSuggestions           string    `json:"feedbackSuggestions"`
+	ExcitementFactors             string    `json:"excitementFactors"`
+	CollaborationChallenges       string    `json:"collaborationChallenges"`
+	OfflineWorkFrequency          string    `json:"offlineWorkFrequency"`
+	OfflineWorkarounds            string    `json:"offlineWorkarounds"`
+	CurrentChangeConflictHandling string    `json:"currentChangeConflictHandling"`
+	VersionControlChallenges      string    `json:"versionControlChallenges"`
 }
 
 type Features struct {
@@ -68,6 +74,14 @@ var (
 	mu         sync.Mutex
 )
 
+// Add caching for survey results
+var (
+	resultsCache   []SurveyResponse
+	cacheTimestamp time.Time
+	cacheDuration  = 5 * time.Minute
+	cacheMutex     sync.RWMutex
+)
+
 func init() {
 	// Only try to load .env file in development
 	if os.Getenv("ENVIRONMENT") != "production" {
@@ -84,100 +98,151 @@ func getEnvWithFallback(key, fallback string) string {
 	return fallback
 }
 
-func initDB() {
+func initDB() error {
 	var err error
-	dbPath := os.Getenv("DATABASE_URL")
-	if dbPath == "" {
-		dbPath = "/app/data/localhavencms.db"
-	}
-
-	// Create data directory with full permissions
-	dataDir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dataDir, 0777); err != nil {
-		log.Printf("Error creating data directory: %v", err)
-		// Try to create in current directory as fallback
-		dbPath = "localhavencms.db"
-	}
-
-	log.Printf("Opening database at: %s", dbPath)
-
-	// Try to create an empty file first to test permissions
-	if _, err := os.OpenFile(dbPath, os.O_RDWR|os.O_CREATE, 0666); err != nil {
-		log.Fatalf("Cannot create database file: %v", err)
-	}
-
-	db, err = sql.Open("sqlite3", dbPath)
+	db, err = sql.Open("sqlite3", "data/localhavencms.db")
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error opening database: %v", err)
 	}
 
-	// Test database connection
-	if err = db.Ping(); err != nil {
-		log.Fatal("Database connection failed:", err)
+	// Check if table exists
+	var tableExists bool
+	err = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master 
+		WHERE type='table' AND name='survey_responses'`).Scan(&tableExists)
+
+	if err != nil || !tableExists {
+		// Create new table if it doesn't exist
+		return createInitialTable()
 	}
 
-	log.Printf("Successfully connected to database at: %s", dbPath)
+	// Check if we need to migrate
+	var columnCount int
+	err = db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('survey_responses') 
+		WHERE name IN ('biggest_frustrations', 'specific_problems')`).Scan(&columnCount)
 
-	// Create or update tables
-	createTables := `
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+	if err != nil || columnCount < 2 {
+		return migrateTable()
+	}
 
-    CREATE TABLE IF NOT EXISTS survey_responses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+	return nil
+}
+
+func createInitialTable() error {
+	_, err := db.Exec(`CREATE TABLE survey_responses (
+		id TEXT PRIMARY KEY,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		role TEXT NOT NULL,
+		other_role TEXT,
+		cms_usage TEXT NOT NULL,
+		other_cms_usage TEXT,
+		-- Features as individual columns
+		offline INTEGER,
+		collaboration INTEGER,
+		asset_management INTEGER,
+		pdf_handling INTEGER,
+		version_control INTEGER,
+		workflows INTEGER,
+		beta_interest BOOLEAN NOT NULL,
+		email TEXT,
+		biggest_frustrations TEXT,
+		specific_problems TEXT,
+		usage_frequency TEXT,
+		primary_purpose TEXT,
+		platforms TEXT,
+		cms_preference TEXT,
+		wished_features TEXT,
+		workflow_importance TEXT,
+		team_size TEXT,
+		collaboration_frequency TEXT,
+		pricing_sensitivity TEXT,
+		pricing_model TEXT,
+		integrations TEXT,
+		integration_importance TEXT,
+		content_types TEXT,
+		custom_formats TEXT,
+		feedback_suggestions TEXT,
+		excitement_factors TEXT,
+		collaboration_challenges TEXT,
+		offline_work_frequency TEXT,
+		offline_workarounds TEXT,
+		current_change_conflict_handling TEXT,
+		version_control_challenges TEXT
+	)`)
+	return err
+}
+
+func migrateTable() error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Create new table with all fields
+	_, err = tx.Exec(`CREATE TABLE survey_responses_new (
+        id TEXT PRIMARY KEY,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         role TEXT NOT NULL,
         other_role TEXT,
         cms_usage TEXT NOT NULL,
         other_cms_usage TEXT,
-        offline_rating INTEGER,
-        collaboration_rating INTEGER,
-        asset_management_rating INTEGER,
-        pdf_handling_rating INTEGER,
-        version_control_rating INTEGER,
-        workflows_rating INTEGER,
-        beta_interest BOOLEAN,
+        features JSON,
+        beta_interest BOOLEAN NOT NULL,
         email TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );`
-
-	_, err = db.Exec(createTables)
+        biggest_frustrations TEXT,
+        specific_problems TEXT,
+        usage_frequency TEXT,
+        primary_purpose TEXT,
+        platforms TEXT,
+        cms_preference TEXT,
+        wished_features TEXT,
+        workflow_importance TEXT,
+        team_size TEXT,
+        collaboration_frequency TEXT,
+        pricing_sensitivity TEXT,
+        pricing_model TEXT,
+        integrations TEXT,
+        integration_importance TEXT,
+        content_types TEXT,
+        custom_formats TEXT,
+        feedback_suggestions TEXT,
+        excitement_factors TEXT,
+        collaboration_challenges TEXT,
+        offline_work_frequency TEXT,
+        offline_workarounds TEXT,
+        current_change_conflict_handling TEXT,
+        version_control_challenges TEXT
+    )`)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	// Update existing table schema to add new fields
-	alterTableQueries := []string{
-		"ALTER TABLE survey_responses ADD COLUMN biggest_frustrations TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN specific_problems TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN usage_frequency TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN primary_purpose TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN platforms TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN cms_preference TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN wished_features TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN workflow_importance TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN team_size TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN collaboration_frequency TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN pricing_sensitivity TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN pricing_model TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN integrations TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN integration_importance TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN content_types TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN custom_formats TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN feedback_suggestions TEXT;",
-		"ALTER TABLE survey_responses ADD COLUMN excitement_factors TEXT;",
+	// Copy data including all feature fields
+	_, err = tx.Exec(`
+        INSERT INTO survey_responses_new (
+            id, created_at, role, other_role, cms_usage, other_cms_usage,
+            offline, collaboration, asset_management,
+            pdf_handling, version_control, workflows,
+            beta_interest, email
+        )
+        SELECT 
+            id, created_at, role, other_role, cms_usage, other_cms_usage,
+            COALESCE(offline, 0), 
+            COALESCE(collaboration, 0),
+            COALESCE(asset_management, 0),
+            COALESCE(pdf_handling, 0),
+            COALESCE(version_control, 0),
+            COALESCE(workflows, 0),
+            beta_interest, email
+        FROM survey_responses
+    `)
+
+	// Complete migration
+	if err != nil {
+		return err
 	}
 
-	for _, query := range alterTableQueries {
-		_, err = db.Exec(query)
-		if err != nil {
-			// Log but do not fail if the column already exists
-			log.Printf("Error updating table schema: %v", err)
-		}
-	}
+	return tx.Commit()
 }
 
 func validateSurveyResponse(r *SurveyResponse) error {
@@ -219,32 +284,77 @@ func rateLimitMiddleware() gin.HandlerFunc {
 	}
 }
 
-func submitSurvey(c *gin.Context) {
-	var response SurveyResponse
-	if err := c.BindJSON(&response); err != nil {
-		log.Printf("Error binding JSON: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
-		return
-	}
+func endpointRateLimiter(limit rate.Limit, burst int) gin.HandlerFunc {
+	limiters := make(map[string]*rate.Limiter)
+	var mu sync.Mutex
 
-	if err := validateSurveyResponse(&response); err != nil {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		endpoint := c.FullPath()
+		key := fmt.Sprintf("%s:%s", ip, endpoint)
+
+		mu.Lock()
+		limiter, exists := limiters[key]
+		if !exists {
+			limiter = rate.NewLimiter(limit, burst)
+			limiters[key] = limiter
+		}
+		mu.Unlock()
+
+		if !limiter.Allow() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func submitSurvey(c *gin.Context) {
+	var survey SurveyResponse
+	if err := c.BindJSON(&survey); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Printf("Received survey response: %+v", response)
+	survey.ID = uuid.New().String()
+	survey.CreatedAt = time.Now()
+
+	// Log the survey data
+	log.Printf("Submitting survey: %+v\n", survey)
+	log.Printf("Features: %+v\n", survey.Features)
 
 	stmt, err := db.Prepare(`
-        INSERT INTO survey_responses(
-            role, other_role, cms_usage, other_cms_usage,
-            offline_rating, collaboration_rating, asset_management_rating,
-            pdf_handling_rating, version_control_rating, workflows_rating,
-            beta_interest, email, biggest_frustrations, specific_problems,
-            usage_frequency, primary_purpose, platforms, cms_preference,
-            wished_features, workflow_importance, team_size, collaboration_frequency,
-            pricing_sensitivity, pricing_model, integrations, integration_importance,
-            content_types, custom_formats, feedback_suggestions, excitement_factors
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		INSERT INTO survey_responses (
+			id, created_at, role, other_role, cms_usage, other_cms_usage,
+			offline, collaboration, asset_management,
+			pdf_handling, version_control, workflows,
+			beta_interest, email,
+			biggest_frustrations, specific_problems,
+			usage_frequency, primary_purpose, platforms,
+			cms_preference, wished_features, workflow_importance,
+			team_size, collaboration_frequency,
+			pricing_sensitivity, pricing_model,
+			integrations, integration_importance,
+			content_types, custom_formats,
+			feedback_suggestions, excitement_factors,
+			collaboration_challenges, offline_work_frequency, offline_workarounds,
+			current_change_conflict_handling, version_control_challenges
+		) VALUES (
+			?, ?, ?, ?, ?, ?,
+			?, ?, ?,
+			?, ?, ?,
+			?, ?,
+			?, ?,
+			?, ?, ?,
+			?, ?, ?,
+			?, ?,
+			?, ?,
+			?, ?,
+			?, ?,
+			 ?, ?, ?, ?
+		)
+	`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -252,33 +362,57 @@ func submitSurvey(c *gin.Context) {
 	defer stmt.Close()
 
 	_, err = stmt.Exec(
-		response.Role, response.OtherRole, response.CmsUsage, response.OtherCmsUsage,
-		response.Features.Offline, response.Features.Collaboration, response.Features.AssetManagement,
-		response.Features.PdfHandling, response.Features.VersionControl, response.Features.Workflows,
-		response.BetaInterest, response.Email, response.BiggestFrustrations, response.SpecificProblems,
-		response.UsageFrequency, response.PrimaryPurpose, response.Platforms, response.CmsPreference,
-		response.WishedFeatures, response.WorkflowImportance, response.TeamSize, response.CollaborationFrequency,
-		response.PricingSensitivity, response.PricingModel, response.Integrations, response.IntegrationImportance,
-		response.ContentTypes, response.CustomFormats, response.FeedbackSuggestions, response.ExcitementFactors,
+		survey.ID, survey.CreatedAt, survey.Role, survey.OtherRole,
+		survey.CmsUsage, survey.OtherCmsUsage,
+		survey.Features.Offline, survey.Features.Collaboration,
+		survey.Features.AssetManagement, survey.Features.PdfHandling,
+		survey.Features.VersionControl, survey.Features.Workflows,
+		survey.BetaInterest, survey.Email,
+		survey.BiggestFrustrations, survey.SpecificProblems,
+		survey.UsageFrequency, survey.PrimaryPurpose,
+		survey.Platforms, survey.CmsPreference,
+		survey.WishedFeatures, survey.WorkflowImportance,
+		survey.TeamSize, survey.CollaborationFrequency,
+		survey.PricingSensitivity, survey.PricingModel,
+		survey.Integrations, survey.IntegrationImportance,
+		survey.ContentTypes, survey.CustomFormats,
+		survey.FeedbackSuggestions, survey.ExcitementFactors,
+		survey.CollaborationChallenges,
+		survey.OfflineWorkFrequency,
+		survey.OfflineWorkarounds,
+		survey.CurrentChangeConflictHandling,
+		survey.VersionControlChallenges,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Survey response recorded"})
+	c.JSON(http.StatusCreated, survey)
 }
 
 func getSurveyResults(c *gin.Context) {
-	rows, err := db.Query(`SELECT id, role, other_role, cms_usage, other_cms_usage,
-		offline_rating, collaboration_rating, asset_management_rating,
-		pdf_handling_rating, version_control_rating, workflows_rating,
+	cacheMutex.RLock()
+	if time.Since(cacheTimestamp) < cacheDuration && resultsCache != nil {
+		defer cacheMutex.RUnlock()
+		c.JSON(http.StatusOK, resultsCache)
+		return
+	}
+	cacheMutex.RUnlock()
+
+	rows, err := db.Query(`
+		SELECT id, role, other_role, cms_usage, other_cms_usage,
+		offline, collaboration, asset_management,
+		pdf_handling, version_control, workflows,
 		beta_interest, email, biggest_frustrations, specific_problems,
 		usage_frequency, primary_purpose, platforms, cms_preference,
 		wished_features, workflow_importance, team_size, collaboration_frequency,
 		pricing_sensitivity, pricing_model, integrations, integration_importance,
 		content_types, custom_formats, feedback_suggestions, excitement_factors,
-		created_at FROM survey_responses`)
+		collaboration_challenges, offline_work_frequency, offline_workarounds,
+		current_change_conflict_handling, version_control_challenges,
+		created_at 
+		FROM survey_responses`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -299,13 +433,20 @@ func getSurveyResults(c *gin.Context) {
 			&response.WorkflowImportance, &response.TeamSize, &response.CollaborationFrequency,
 			&response.PricingSensitivity, &response.PricingModel, &response.Integrations,
 			&response.IntegrationImportance, &response.ContentTypes, &response.CustomFormats,
-			&response.FeedbackSuggestions, &response.ExcitementFactors, &response.CreatedAt)
+			&response.FeedbackSuggestions, &response.ExcitementFactors, &response.CollaborationChallenges,
+			&response.OfflineWorkFrequency, &response.OfflineWorkarounds, &response.CurrentChangeConflictHandling,
+			&response.VersionControlChallenges, &response.CreatedAt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		responses = append(responses, response)
 	}
+
+	cacheMutex.Lock()
+	resultsCache = responses
+	cacheTimestamp = time.Now()
+	cacheMutex.Unlock()
 
 	c.JSON(http.StatusOK, responses)
 }
@@ -412,20 +553,200 @@ func verifyToken(c *gin.Context) {
 	})
 }
 
-func getTrustedProxies() []string {
+func getTrustedProxies() ([]string, error) {
 	// Get from environment variable, fallback to Docker network ranges
 	trustedProxies := os.Getenv("TRUSTED_PROXIES")
 	if trustedProxies != "" {
-		return strings.Split(trustedProxies, ",")
+		proxies := strings.Split(trustedProxies, ",")
+		// Validate each proxy address/range
+		for _, proxy := range proxies {
+			proxy = strings.TrimSpace(proxy)
+			if !strings.Contains(proxy, "/") && net.ParseIP(proxy) == nil {
+				return nil, fmt.Errorf("invalid proxy address: %s", proxy)
+			}
+		}
+		return proxies, nil
 	}
 
-	// Default Docker network ranges
+	// Default secure Docker network ranges
 	return []string{
-		"172.16.0.0/12",  // Docker default
-		"192.168.0.0/16", // Docker default
-		"10.0.0.0/8",     // Docker default
+		"172.16.0.0/12",  // Docker default bridge network
+		"192.168.0.0/16", // Docker user-defined networks
+		"10.0.0.0/8",     // Docker overlay networks
 		"127.0.0.1",      // Localhost
+	}, nil
+}
+
+// Add metrics collection
+type Metrics struct {
+	TotalResponses       int                `json:"totalResponses"`
+	BetaInterestCount    int                `json:"betaInterestCount"`
+	AverageFeatureScores map[string]float64 `json:"averageFeatureScores"`
+	UsageFrequencyStats  map[string]int     `json:"usageFrequencyStats"`
+	TeamSizeDistribution map[string]int     `json:"teamSizeDistribution"`
+	PricingPreferences   map[string]int     `json:"pricingPreferences"`
+}
+
+func getMetrics(c *gin.Context) {
+	metrics := Metrics{
+		AverageFeatureScores: make(map[string]float64),
+		UsageFrequencyStats:  make(map[string]int),
+		TeamSizeDistribution: make(map[string]int),
+		PricingPreferences:   make(map[string]int),
 	}
+
+	var (
+		offlineScore, collaborationScore, assetScore float64
+		pdfScore, vcScore, workflowScore             float64
+	)
+
+	// Get basic counts and feature averages
+	err := db.QueryRow(`
+		SELECT 
+			COUNT(*) as total,
+			SUM(CASE WHEN beta_interest = 1 THEN 1 ELSE 0 END) as beta_count,
+			AVG(offline) as avg_offline,
+			AVG(collaboration) as avg_collab,
+			AVG(asset_management) as avg_asset,
+			AVG(pdf_handling) as avg_pdf,
+			AVG(version_control) as avg_vc,
+			AVG(workflows) as avg_workflow
+		FROM survey_responses
+	`).Scan(
+		&metrics.TotalResponses,
+		&metrics.BetaInterestCount,
+		&offlineScore,
+		&collaborationScore,
+		&assetScore,
+		&pdfScore,
+		&vcScore,
+		&workflowScore,
+	)
+
+	// Then assign to map
+	metrics.AverageFeatureScores["offline"] = offlineScore
+	metrics.AverageFeatureScores["collaboration"] = collaborationScore
+	metrics.AverageFeatureScores["assetManagement"] = assetScore
+	metrics.AverageFeatureScores["pdfHandling"] = pdfScore
+	metrics.AverageFeatureScores["versionControl"] = vcScore
+	metrics.AverageFeatureScores["workflows"] = workflowScore
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get usage frequency distribution
+	rows, err := db.Query(`
+		SELECT usage_frequency, COUNT(*) as count 
+		FROM survey_responses 
+		GROUP BY usage_frequency
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var frequency string
+		var count int
+		if err := rows.Scan(&frequency, &count); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		metrics.UsageFrequencyStats[frequency] = count
+	}
+
+	// Get team size distribution
+	rows, err = db.Query(`
+		SELECT team_size, COUNT(*) as count 
+		FROM survey_responses 
+		GROUP BY team_size
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var size string
+		var count int
+		if err := rows.Scan(&size, &count); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		metrics.TeamSizeDistribution[size] = count
+	}
+
+	// Get pricing preferences
+	rows, err = db.Query(`
+		SELECT pricing_model, COUNT(*) as count 
+		FROM survey_responses 
+		GROUP BY pricing_model
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var model string
+		var count int
+		if err := rows.Scan(&model, &count); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		metrics.PricingPreferences[model] = count
+	}
+
+	// Round feature scores to 2 decimal places
+	for key, value := range metrics.AverageFeatureScores {
+		metrics.AverageFeatureScores[key] = float64(int(value*100)) / 100
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}
+
+func setupRouter(env string) *gin.Engine {
+	r := gin.Default()
+
+	// Disable rate limiting for preview environment
+	if os.Getenv("RATE_LIMIT_DISABLED") == "true" {
+		r.GET("/health", func(c *gin.Context) {
+			c.Header("X-Environment", "preview")
+			c.String(200, "healthy")
+		})
+	} else {
+		// Use rate limiting
+		r.Use(rateLimitMiddleware())
+
+		// Public routes
+		r.POST("/survey", endpointRateLimiter(rate.Every(time.Minute), 5), submitSurvey)
+		r.POST("/login", endpointRateLimiter(rate.Every(time.Minute), 3), login)
+
+		// Add explicit health check logging
+		r.GET("/health", func(c *gin.Context) {
+			log.Printf("Health check from: %s", c.Request.Host)
+			c.JSON(http.StatusOK, gin.H{
+				"status": "healthy",
+				"host":   c.Request.Host,
+			})
+		})
+
+		// Protected routes
+		authorized := r.Group("/")
+		authorized.Use(AuthMiddleware())
+		{
+			authorized.GET("/results", getSurveyResults)
+			authorized.GET("/verify", verifyToken)
+			authorized.DELETE("/results/:id", deleteResult)
+			authorized.GET("/metrics", getMetrics)
+		}
+	}
+
+	return r
 }
 
 func main() {
@@ -445,76 +766,20 @@ func main() {
 	initDB()
 	defer db.Close()
 
-	router := gin.Default()
-
-	// Set trusted proxies
-	if err := router.SetTrustedProxies(getTrustedProxies()); err != nil {
-		log.Printf("Warning: Failed to set trusted proxies: %v", err)
+	// Set trusted proxies with proper error handling
+	trustedProxies, err := getTrustedProxies()
+	if err != nil {
+		log.Fatalf("Failed to configure trusted proxies: %v", err)
 	}
 
-	router.Use(func(c *gin.Context) {
-		allowedOrigins := []string{
-			"http://localhost:3000",
-			"https://localhavencms.com",
-			"https://www.localhavencms.com",
-			"https://api.localhavencms.com",
-		}
+	router := setupRouter(os.Getenv("ENVIRONMENT"))
 
-		// Log the incoming request details for debugging
-		log.Printf("Incoming request from: %s to: %s", c.Request.Host, c.Request.URL.Path)
-
-		origin := c.Request.Header.Get("Origin")
-		if origin != "" {
-			for _, allowedOrigin := range allowedOrigins {
-				if origin == allowedOrigin {
-					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-					break
-				}
-			}
-		}
-
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		// Set security headers
-		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
-		c.Writer.Header().Set("X-Frame-Options", "DENY")
-		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
-
-		c.Next()
-	})
-
-	// Use rate limiting
-	router.Use(rateLimitMiddleware())
-
-	// Public routes
-	router.POST("/survey", submitSurvey)
-	router.POST("/login", login)
-
-	// Add explicit health check logging
-	router.GET("/health", func(c *gin.Context) {
-		log.Printf("Health check from: %s", c.Request.Host)
-		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
-			"host":   c.Request.Host,
-		})
-	})
-
-	// Protected routes
-	authorized := router.Group("/")
-	authorized.Use(AuthMiddleware())
-	{
-		authorized.GET("/results", getSurveyResults)
-		authorized.GET("/verify", verifyToken)
-		authorized.DELETE("/results/:id", deleteResult)
+	if err := router.SetTrustedProxies(trustedProxies); err != nil {
+		log.Fatalf("Failed to set trusted proxies: %v", err)
 	}
+
+	// Log the configured trusted proxies
+	log.Printf("Configured trusted proxies: %v", trustedProxies)
 
 	port := os.Getenv("PORT")
 	if port == "" {
