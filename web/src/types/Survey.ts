@@ -110,7 +110,7 @@ export interface Feature {
 export type FieldValue = string | number | boolean | undefined;
 
 export interface SurveyFormData {
-  [key: string]: FieldValue | Features | Record<string, any>;
+  [key: string]: FieldValue | Features | Record<string, unknown>;
   features: {
     offline: number;
     collaboration: number;

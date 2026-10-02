@@ -42,7 +42,7 @@
 
   {#if currentStep < 6}
     <div class="step-container">
-      {#each [0, 1, 2, 3, 4, 5] as step}
+      {#each [0, 1, 2, 3, 4, 5] as step (step)}
         <div class="step-indicator {step <= currentStep ? 'step-active' : 'step-inactive'}"></div>
       {/each}
     </div>

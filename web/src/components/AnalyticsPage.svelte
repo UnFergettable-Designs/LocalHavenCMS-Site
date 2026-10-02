@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import { auth } from '../stores/auth';
   import { config } from '../config';
-  import type { SurveyResponse, MetricsData, Features } from '../types/Survey';
+  import type { SurveyResponse, Features } from '../types/Survey';
   import AnalyticsDashboard from './AnalyticsDashboard.svelte';
 
   // Strongly type the distributions
@@ -12,7 +13,7 @@
   let surveyResults: SurveyResponse[] = [];
   let loading = true;
   let error = '';
-  let deletingIds: Set<string> = new Set();
+  let deletingIds = new SvelteSet<string>();
 
   // Add new metrics
   let totalResponses = 0;
@@ -28,7 +29,6 @@
   let cmsUsageDistribution: Distribution = {};
   let usageFrequencyDistribution: Distribution = {};
   let betaInterestCount = 0;
-  let metrics: MetricsData | null = null;
 
   onMount(async () => {
     const token = localStorage.getItem('token');
@@ -138,7 +138,6 @@
   async function deleteResult(id: string) {
     try {
       deletingIds.add(id);
-      deletingIds = deletingIds; // trigger reactivity
 
       const token = localStorage.getItem('token');
       const response = await fetch(`${config.apiUrl}/results/${id}`, {
@@ -159,36 +158,6 @@
       console.error('Error:', e);
     } finally {
       deletingIds.delete(id);
-      deletingIds = deletingIds; // trigger reactivity
-    }
-  }
-
-  async function fetchResults() {
-    try {
-      loading = true;
-      error = '';
-
-      const response = await fetch(`${config.apiUrl}/results`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          auth.logout();
-          window.location.href = '/login';
-          return;
-        }
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
-
-      surveyResults = await response.json();
-    } catch (err: any) {
-      error = err.message || 'Failed to fetch results';
-      console.error('Error fetching results:', err);
-    } finally {
-      loading = false;
     }
   }
 </script>
@@ -218,7 +187,7 @@
       <div class="chart-container">
         <h3>Feature Importance</h3>
         <div class="feature-scores">
-          {#each Object.entries(averageFeatureScores) as [feature, score]}
+          {#each Object.entries(averageFeatureScores) as [feature, score] (feature)}
             <div class="feature-score">
               <span class="feature-name">{feature}</span>
               <div class="score-bar" style="width: {score * 20}%">{score}</div>
@@ -230,7 +199,7 @@
       <div class="chart-container">
         <h3>Role Distribution</h3>
         <div class="distribution-list">
-          {#each Object.entries(roleDistribution) as [role, count]}
+          {#each Object.entries(roleDistribution) as [role, count] (role)}
             <div class="distribution-item">
               <span>{role}</span>
               <span class="count">{count}</span>
@@ -242,7 +211,7 @@
       <div class="chart-container">
         <h3>CMS Usage</h3>
         <div class="distribution-list">
-          {#each Object.entries(cmsUsageDistribution) as [cms, count]}
+          {#each Object.entries(cmsUsageDistribution) as [cms, count] (cms)}
             <div class="distribution-item">
               <span>{cms}</span>
               <span class="count">{count}</span>
@@ -253,7 +222,7 @@
     </div>
 
     <div class="results-grid">
-      {#each surveyResults as result}
+      {#each surveyResults as result (result.id)}
         <div class="result-card">
           <button
             class="delete-button"
@@ -279,7 +248,7 @@
             <li>
               <strong>Feature Ratings:</strong>
               <ul class="feature-list">
-                {#each Object.entries(result.features) as [feature, rating]}
+                {#each Object.entries(result.features) as [feature, rating] (feature)}
                   <li>{feature}: {rating}/5</li>
                 {/each}
               </ul>

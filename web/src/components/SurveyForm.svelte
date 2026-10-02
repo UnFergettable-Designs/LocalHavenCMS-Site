@@ -3,7 +3,6 @@
     FormField,
     SurveyResponse,
     Features,
-    FieldValue,
     SurveyFormData,
   } from '../types/Survey';
 
@@ -51,16 +50,6 @@
   // Type the errors object
   let errors: Record<string, string> = {};
   let currentFields: FormField[] = [];
-
-  // Add feature labels for display
-  const featureLabels = {
-    offline: 'Offline Capabilities',
-    collaboration: 'Collaboration',
-    assetManagement: 'Asset Management',
-    pdfHandling: 'PDF Handling',
-    versionControl: 'Version Control',
-    workflows: 'Workflows',
-  } as const;
 
   // Reactive statement to update current fields when step changes
   $: {
@@ -215,30 +204,6 @@
     }
   }
 
-  function isFeatureField(fieldName: string): boolean {
-    return fieldName.startsWith('features.');
-  }
-
-  function getFieldValue(field: FormField): FieldValue {
-    if (isFeatureField(field.name)) {
-      const [, featureName] = field.name.split('.') as [string, keyof Features];
-      return formData.features[featureName];
-    }
-    return formData[field.name] as FieldValue;
-  }
-
-  function setFieldValue(field: FormField, value: FieldValue): void {
-    if (isFeatureField(field.name)) {
-      const [, featureName] = field.name.split('.') as [string, keyof Features];
-      formData.features = {
-        ...formData.features,
-        [featureName]: value as number,
-      };
-    } else {
-      formData[field.name] = value;
-    }
-  }
-
   function isLastStep(): boolean {
     return currentStep === TOTAL_STEPS - 1;
   }
@@ -263,7 +228,7 @@
   </div>
 {:else}
   <form on:submit={handleSubmit}>
-    {#each currentFields as field}
+    {#each currentFields as field (field.id)}
       <div class="form-field">
         <label for={field.id}>
           {field.label}
@@ -282,7 +247,7 @@
               disabled={isSubmitting}
             >
               <option value="">Select an option</option>
-              {#each field.options || [] as option}
+              {#each field.options || [] as option (option)}
                 <option value={option}>{option}</option>
               {/each}ß
             </select>
@@ -305,7 +270,7 @@
             />
           {:else if field.type === 'radio'}
             <fieldset role="radiogroup">
-              {#each field.options || [] as option}
+              {#each field.options || [] as option (option)}
                 <div class="radio-option">
                   <input
                     type="radio"

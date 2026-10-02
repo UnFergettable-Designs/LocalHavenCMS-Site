@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { config } from '../config';
   import Chart from 'chart.js/auto';
-  import type { ChartData, ChartOptions, ChartType, Chart as ChartInstance } from 'chart.js';
+  import type { ChartData, ChartOptions, Chart as ChartInstance } from 'chart.js';
   import type { SurveyResponse, Features, DashboardMetrics } from '../types/Survey';
 
   interface TypedChartData extends ChartData {
@@ -115,9 +114,6 @@
 
     const featureCtx = getContext('featureChart');
     const roleCtx = getContext('roleChart');
-    const cmsCtx = getContext('cmsChart');
-    const teamSizeCtx = getContext('teamSizeChart');
-    const pricingCtx = getContext('pricingChart');
 
     if (featureCtx) {
       charts.feature = new Chart(featureCtx, {
@@ -172,7 +168,6 @@
 
   $: if (surveyResults.length > 0) {
     calculateMetrics();
-    updateCharts();
   }
 </script>
 

@@ -24,7 +24,7 @@
       } else {
         error = 'Invalid credentials';
       }
-    } catch (e) {
+    } catch {
       error = 'Login failed. Please try again.';
     } finally {
       isLoading = false;
